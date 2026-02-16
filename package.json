@@ -1,6 +1,6 @@
 {
   "name": "codex-claude-proxy",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Multi-account proxy server for OpenAI Codex CLI with Claude API compatibility",
   "type": "module",
   "main": "src/index.js",

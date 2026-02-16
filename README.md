@@ -6,6 +6,18 @@ A local proxy server that exposes an **Anthropic-compatible API** (Claude Messag
 
 It is designed primarily for **Claude Code CLI** (Anthropic-format client) while actually executing requests against Codex.
 
+## Table of Contents
+- [How it works](#how-it-works)
+- [Model Mapping](#model-mapping-claude-name--codex)
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Authentication](#authenticate-codex--chatgpt)
+- [Claude Code Integration](#configure-claude-code-to-use-the-proxy)
+- [API Reference](#api-surface-high-level)
+- [Documentation](#documentation)
+- [Legal](#legal)
+
 
 ---
 
@@ -213,19 +225,16 @@ Full reference: [API Reference](./docs/API.md).
 
 ## Documentation
 
-- [Documentation](./docs/ARCHITECTURE.md)
-- [Available Models](./docs/API.md)
-- [Multi-Account Load Balancing](./docs/ACCOUNTS.md)
-- [Web Management Console](./docs/ARCHITECTURE.md)
-- [Advanced Configuration](./docs/API.md)
-- [macOS Menu Bar App](./docs/ARCHITECTURE.md)
-- [OpenClaw / ClawdBot Integration](./docs/OPENCLAW.md)
-- [API Endpoints](./docs/API.md)
-- [Testing](./docs/API.md)
-- [Troubleshooting](./docs/API.md)
-- [Safety, Usage, and Risk Notices](./docs/ARCHITECTURE.md)
-- [Legal](./docs/ARCHITECTURE.md)
-- [Development](./docs/ARCHITECTURE.md)
+- [**Architecture**](./docs/ARCHITECTURE.md) - Design and flow
+- [**API Reference**](./docs/API.md) - Endpoints and model list
+- [**Accounts**](./docs/ACCOUNTS.md) - Multi-account management
+- [**OAuth**](./docs/OAUTH.md) - Authentication details
+- [**OpenClaw**](./docs/OPENCLAW.md) - Using with messaging gateways
+- [**Claude Code**](./docs/CLAUDE_INTEGRATION.md) - Detailed CLI setup guide
+
+## Legal
+
+See [Legal Notices](./docs/legal.md).
 
 ---
 
