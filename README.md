@@ -6,7 +6,6 @@ A local proxy server that exposes an **Anthropic-compatible API** (Claude Messag
 
 It is designed primarily for **Claude Code CLI** (Anthropic-format client) while actually executing requests against Codex.
 
-> This project is inspired by the structure of the Antigravity Claude Proxy README, but this proxy targets **ChatGPT Codex** and does **not** implement all Antigravity features.
 
 ---
 
@@ -16,13 +15,6 @@ It is designed primarily for **Claude Code CLI** (Anthropic-format client) while
 - “ChatGPT”, “OpenAI”, and “Codex” are trademarks of their respective owners.
 - “Claude” and “Anthropic” are trademarks of Anthropic PBC.
 - Software is provided **“as is”**, without warranty. You are responsible for complying with all applicable Terms of Service and Acceptable Use Policies.
-
-### Legal
-
-- **Not affiliated with OpenAI or Anthropic.** This is an independent open-source project and is not endorsed by, sponsored by, or affiliated with OpenAI or Anthropic.
-- “ChatGPT”, “OpenAI”, and “Codex” are trademarks of their respective owners.
-- “Claude” and “Anthropic” are trademarks of Anthropic PBC.
-- Software is provided "as is", without warranty. You are responsible for complying with all applicable Terms of Service and Acceptable Use Policies.
 
 ---
 
@@ -162,13 +154,13 @@ npm run accounts:add:headless
 
 ### Option C: Import from Codex app
 
-You can import an existing Codex app session via the server (see `docs/ACCOUNTS.md` for details).
+You can import an existing Codex app session via the server (see [Accounts](./docs/ACCOUNTS.md) for details).
 
 ```bash
 curl -X POST http://localhost:8081/accounts/import
 ```
 
-Details: `docs/OAUTH.md` and `docs/ACCOUNTS.md`.
+Details: [OAuth](./docs/OAUTH.md) and [Accounts](./docs/ACCOUNTS.md).
 
 ---
 
@@ -190,7 +182,7 @@ export ANTHROPIC_API_KEY=any-key
 claude
 ```
 
-More details: `docs/CLAUDE_INTEGRATION.md`.
+More details: [Claude Code Integration](./docs/CLAUDE_INTEGRATION.md).
 
 ---
 
@@ -215,25 +207,34 @@ More details: `docs/CLAUDE_INTEGRATION.md`.
   - `GET /api/logs`
   - `GET /api/logs/stream?history=true`
 
-Full reference: `docs/API.md`.
+Full reference: [API Reference](./docs/API.md).
 
 ---
 
 ## Documentation
 
-- `docs/ARCHITECTURE.md` — system overview and data flow
-- `docs/API.md` — endpoints, formats, streaming
-- `docs/OAUTH.md` — OAuth PKCE implementation + headless flow
-- `docs/ACCOUNTS.md` — multi-account storage, switching, refresh, quota caching
-- `docs/CLAUDE_INTEGRATION.md` — how to use with Claude Code
-- `docs/OPENCLAW.md` — using the proxy behind OpenClaw
+- [Documentation](./docs/ARCHITECTURE.md)
+- [Available Models](./docs/API.md)
+- [Multi-Account Load Balancing](./docs/ACCOUNTS.md)
+- [Web Management Console](./docs/ARCHITECTURE.md)
+- [Advanced Configuration](./docs/API.md)
+- [macOS Menu Bar App](./docs/ARCHITECTURE.md)
+- [OpenClaw / ClawdBot Integration](./docs/OPENCLAW.md)
+- [API Endpoints](./docs/API.md)
+- [Testing](./docs/API.md)
+- [Troubleshooting](./docs/API.md)
+- [Safety, Usage, and Risk Notices](./docs/ARCHITECTURE.md)
+- [Legal](./docs/ARCHITECTURE.md)
+- [Development](./docs/ARCHITECTURE.md)
 
 ---
 
-## Notes / limitations
+## Credits
 
-- This project is intended for **local** or **trusted** environments.
-- Some behavior differs from Antigravity proxy; this repo focuses on ChatGPT Codex routing.
+This project is based on insights and code from:
+
+- [badrisnarayanan/antigravity-claude-proxy](https://github.com/badrisnarayanan/antigravity-claude-proxy)
+- [1rgs/claude-code-proxy](https://github.com/1rgs/claude-code-proxy)
 
 ---
 
