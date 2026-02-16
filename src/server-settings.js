@@ -1,0 +1,48 @@
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
+import { CONFIG_DIR } from './account-manager.js';
+
+const SETTINGS_FILE = join(CONFIG_DIR, 'settings.json');
+
+const DEFAULT_SETTINGS = {
+    haikuKiloModel: 'glm-5'
+};
+
+function ensureConfigDir() {
+    if (!existsSync(CONFIG_DIR)) {
+        mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+}
+
+export function getServerSettings() {
+    ensureConfigDir();
+
+    if (!existsSync(SETTINGS_FILE)) {
+        return { ...DEFAULT_SETTINGS };
+    }
+
+    try {
+        const data = JSON.parse(readFileSync(SETTINGS_FILE, 'utf8'));
+        return { ...DEFAULT_SETTINGS, ...data };
+    } catch (error) {
+        console.error('[ServerSettings] Failed to read settings:', error.message);
+        return { ...DEFAULT_SETTINGS };
+    }
+}
+
+export function setServerSettings(patch = {}) {
+    const current = getServerSettings();
+    const next = { ...current, ...patch };
+
+    ensureConfigDir();
+    writeFileSync(SETTINGS_FILE, JSON.stringify(next, null, 2));
+    return next;
+}
+
+export { SETTINGS_FILE };
+
+export default {
+    getServerSettings,
+    setServerSettings,
+    SETTINGS_FILE
+};

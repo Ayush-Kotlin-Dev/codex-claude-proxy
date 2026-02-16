@@ -1,0 +1,44 @@
+{
+  "name": "codex-claude-proxy",
+  "version": "1.0.0",
+  "description": "Multi-account proxy server for OpenAI Codex CLI with Claude API compatibility",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "codex-claude-proxy": "./src/cli/index.js",
+    "codex-proxy-accounts": "./src/cli/accounts.js"
+  },
+  "files": [
+    "src",
+    "public",
+    "docs",
+    "images",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ayush-Kotlin-Dev/codex-claude-proxy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ayush-Kotlin-Dev/codex-claude-proxy/issues"
+  },
+  "homepage": "https://github.com/Ayush-Kotlin-Dev/codex-claude-proxy#readme",
+  "scripts": {
+    "start": "node src/index.js",
+    "accounts": "node src/cli/accounts.js",
+    "accounts:add": "node src/cli/accounts.js add",
+    "accounts:add:headless": "node src/cli/accounts.js add --no-browser",
+    "accounts:list": "node src/cli/accounts.js list"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "keywords": ["codex", "openai", "proxy", "claude", "chatgpt", "oauth"],
+  "license": "MIT"
+}

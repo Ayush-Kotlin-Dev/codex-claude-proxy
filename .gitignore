@@ -1,0 +1,15 @@
+node_modules/
+.DS_Store
+telemetry-id
+# Ignore external reference projects
+antigravity-claude-proxy-main/
+# Ignore credentials
+accounts.json
+auth.json
+.codex-claude-proxy/
+.internal/
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env

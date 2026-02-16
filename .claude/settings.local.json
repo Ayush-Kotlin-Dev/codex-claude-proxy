@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git check-ignore:*)",
+      "Bash(echo:*)",
+      "Bash(node --test:*)",
+      "Bash(ROUTING_TEST_BASE_URL=http://localhost:8081 node:*)",
+      "Bash(node:*)",
+      "Bash(curl:*)",
+      "Bash(npm pack:*)",
+      "Bash(git status -uno)",
+      "Bash(git switch:*)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git tag:*)",
+      "Bash(git push:*)",
+      "Bash(gh release create:*)",
+      "Bash(gh repo view:*)",
+      "Bash(git checkout:*)"
+    ],
+    "deny": [
+      "Skill(superpowers:*)"
+    ]
+  }
+}
