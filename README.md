@@ -59,7 +59,7 @@ This proxy accepts Claude-style model IDs (what Claude Code expects) and maps th
 |---|---|---:|---|
 | `claude-sonnet-4-5` | **GPT-5.2 Codex** | Yes | Default “Sonnet” lane |
 | `claude-opus-4-5` | **GPT-5.3 Codex** | Yes | Default “Opus” lane |
-| `claude-haiku-4` | **GPT-5.2** (fast lane) | Yes | Lightweight / fast |
+| `claude-haiku-4` | **GLM-5 / MiniMax M2.5** | No | Unlimited / No Auth required |
 
 ---
 
