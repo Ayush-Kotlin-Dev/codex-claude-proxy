@@ -13,7 +13,7 @@ startServer({ port: PORT });
 
 console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║                 Codex Claude Proxy v1.0.1                    ║
+║                 Codex Claude Proxy v1.0.2                    ║
 ║                   (Direct API Mode)                          ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  Server:   http://localhost:${PORT}                          ║

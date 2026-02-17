@@ -14,7 +14,6 @@ It is designed primarily for **Claude Code CLI** (Anthropic-format client) while
 - [Quick Start](#quick-start)
 - [Authentication](#authenticate-codex--chatgpt)
 - [Claude Code Integration](#configure-claude-code-to-use-the-proxy)
-- [API Reference](#api-surface-high-level)
 - [Documentation](#documentation)
 - [Legal](#legal)
 
@@ -198,30 +197,13 @@ More details: [Claude Code Integration](./docs/CLAUDE_INTEGRATION.md).
 
 ---
 
-## API surface (high level)
+## Security
 
-- Anthropic-compatible:
-  - `POST /v1/messages`
-  - `GET  /v1/models`
-  - `POST /v1/messages/count_tokens`
-
-- OpenAI-compatible:
-  - `POST /v1/chat/completions`
-
-- Accounts:
-  - `GET  /accounts`
-  - `POST /accounts/add`
-  - `POST /accounts/add/manual`
-  - `POST /accounts/switch`
-  - `POST /accounts/refresh`, `POST /accounts/refresh/all`
-
-- Logs:
-  - `GET /api/logs`
-  - `GET /api/logs/stream?history=true`
-
-Full reference: [API Reference](./docs/API.md).
+- **Localhost Only**: CORS is strictly restricted to `localhost` and `127.0.0.1` to prevent unauthorized cross-origin requests from external websites.
+- **Credential Safety**: Credentials are not allowed in cross-origin requests.
 
 ---
+
 
 ## Documentation
 

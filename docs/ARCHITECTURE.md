@@ -51,7 +51,7 @@ codex-claude-proxy/
 | File | Purpose |
 |------|---------|
 | `index.js` | Entry point (starts server) |
-| `server.js` | Express server, routes, request handling |
+| `server.js` | Express server, routes, request handling (CORS restricted) |
 | `routes/api-routes.js` | API route registrations (mounted by server) |
 | `oauth.js` | OAuth 2.0 PKCE flow, token exchange |
 | `account-manager.js` | Account persistence, switching, token refresh |

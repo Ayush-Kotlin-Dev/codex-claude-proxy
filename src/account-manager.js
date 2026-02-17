@@ -26,10 +26,10 @@ const tokenCache = new Map();
 
 function ensureConfigDir() {
     if (!existsSync(CONFIG_DIR)) {
-        mkdirSync(CONFIG_DIR, { recursive: true });
+        mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
     }
     if (!existsSync(ACCOUNTS_DIR)) {
-        mkdirSync(ACCOUNTS_DIR, { recursive: true });
+        mkdirSync(ACCOUNTS_DIR, { recursive: true, mode: 0o700 });
     }
 }
 
@@ -64,7 +64,7 @@ function loadAccounts() {
 
 function saveAccounts(data) {
     ensureConfigDir();
-    writeFileSync(ACCOUNTS_FILE, JSON.stringify(data, null, 2));
+    writeFileSync(ACCOUNTS_FILE, JSON.stringify(data, null, 2), { mode: 0o600 });
 }
 
 function getActiveAccount() {
@@ -80,7 +80,7 @@ function updateAccountAuth(account) {
     const authFile = getAccountAuthFile(account.email);
     
     if (!existsSync(accountDir)) {
-        mkdirSync(accountDir, { recursive: true });
+        mkdirSync(accountDir, { recursive: true, mode: 0o700 });
     }
     
     const authData = {
@@ -96,7 +96,7 @@ function updateAccountAuth(account) {
     };
     
     try {
-        writeFileSync(authFile, JSON.stringify(authData, null, 2));
+        writeFileSync(authFile, JSON.stringify(authData, null, 2), { mode: 0o600 });
         console.log(`[AccountManager] Updated auth for: ${account.email}`);
     } catch (e) {
         console.error('[AccountManager] Failed to update auth:', e.message);

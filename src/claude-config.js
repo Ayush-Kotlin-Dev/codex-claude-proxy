@@ -60,13 +60,13 @@ export async function updateClaudeConfig(updates) {
     
     const configDir = path.dirname(configPath);
     try {
-        await fs.mkdir(configDir, { recursive: true });
+        await fs.mkdir(configDir, { recursive: true, mode: 0o700 });
     } catch (error) {
         // Ignore if exists
     }
     
     try {
-        await fs.writeFile(configPath, JSON.stringify(newConfig, null, 2), 'utf8');
+        await fs.writeFile(configPath, JSON.stringify(newConfig, null, 2), { encoding: 'utf8', mode: 0o600 });
         console.log(`[ClaudeConfig] Updated config at ${configPath}`);
         return newConfig;
     } catch (error) {

@@ -39,9 +39,9 @@ function saveAccounts(data) {
     try {
         const dir = dirname(ACCOUNTS_FILE);
         if (!existsSync(dir)) {
-            mkdirSync(dir, { recursive: true });
+            mkdirSync(dir, { recursive: true, mode: 0o700 });
         }
-        writeFileSync(ACCOUNTS_FILE, JSON.stringify(data, null, 2));
+        writeFileSync(ACCOUNTS_FILE, JSON.stringify(data, null, 2), { mode: 0o600 });
         console.log(`\n✓ Saved ${data.accounts.length} account(s) to ${ACCOUNTS_FILE}`);
     } catch (error) {
         console.error('Error saving accounts:', error.message);
