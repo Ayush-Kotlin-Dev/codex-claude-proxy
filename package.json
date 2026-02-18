@@ -33,7 +33,12 @@
     "accounts": "node src/cli/accounts.js",
     "accounts:add": "node src/cli/accounts.js add",
     "accounts:add:headless": "node src/cli/accounts.js add --no-browser",
-    "accounts:list": "node src/cli/accounts.js list"
+    "accounts:list": "node src/cli/accounts.js list",
+    "test": "node --test tests/*.test.js",
+    "test:api": "node --test tests/api.test.js",
+    "test:routing": "node --test tests/routing.test.js",
+    "test:cors": "node --test tests/cors_security.test.js",
+    "test:ui": "node --test tests/ui.test.js"
   },
   "dependencies": {
     "express": "^4.18.2",

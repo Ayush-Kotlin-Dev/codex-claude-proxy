@@ -1,0 +1,80 @@
+/**
+ * SSE Helpers
+ * Shared utilities for Server-Sent Events streaming and error responses.
+ */
+
+import { formatSSEEvent } from '../response-streamer.js';
+import { logger } from '../utils/logger.js';
+
+/**
+ * Sets the standard SSE response headers and flushes them.
+ * @param {import('express').Response} res
+ */
+export function initSSEResponse(res) {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+}
+
+/**
+ * Streams an async generator of Anthropic-format SSE events to the response.
+ * Writes [DONE] and ends the response when the generator is exhausted.
+ *
+ * @param {import('express').Response} res
+ * @param {AsyncIterable<object>} eventStream
+ */
+export async function pipeSSEStream(res, eventStream) {
+  for await (const event of eventStream) {
+    res.write(formatSSEEvent(event));
+  }
+  res.write('data: [DONE]\n\n');
+  res.end();
+}
+
+/**
+ * Sends a structured Anthropic-style error JSON response.
+ * If headers have already been sent (mid-stream), writes an SSE error event instead.
+ *
+ * @param {import('express').Response} res
+ * @param {Error} error
+ * @param {string} model
+ * @param {number} startTime
+ */
+export function handleStreamError(res, error, model, startTime) {
+  const duration = Date.now() - startTime;
+  logger.response(500, { model, error: error.message, duration });
+
+  if (res.headersSent) {
+    res.write(
+      `event: error\ndata: ${JSON.stringify({
+        type: 'error',
+        error: { type: 'api_error', message: error.message }
+      })}\n\n`
+    );
+    res.end();
+    return;
+  }
+
+  if (error.message.includes('AUTH_EXPIRED')) {
+    return res.status(401).json({
+      type: 'error',
+      error: { type: 'authentication_error', message: 'Token expired. Please refresh or re-authenticate.' }
+    });
+  }
+
+  if (error.message.includes('RATE_LIMITED')) {
+    return res.status(429).json({
+      type: 'error',
+      error: { type: 'rate_limit_error', message: error.message }
+    });
+  }
+
+  res.status(500).json({
+    type: 'error',
+    error: { type: 'api_error', message: error.message }
+  });
+}
+
+export default { initSSEResponse, pipeSSEStream, handleStreamError };
