@@ -79,7 +79,8 @@ export async function setProxyMode(proxyUrl, models = {}) {
     const updates = {
         env: {
             ANTHROPIC_BASE_URL: proxyUrl,
-            ANTHROPIC_API_KEY: 'any-key',
+            ANTHROPIC_API_KEY: 'sk-ant-proxy',
+            ANTHROPIC_AUTH_TOKEN: undefined, // Explicitly unset to avoid conflict
             ANTHROPIC_MODEL: models.default || 'claude-sonnet-4-5',
             ANTHROPIC_DEFAULT_OPUS_MODEL: models.opus || 'claude-opus-4-5',
             ANTHROPIC_DEFAULT_SONNET_MODEL: models.sonnet || 'claude-sonnet-4-5',
@@ -94,17 +95,11 @@ export async function setDirectMode(apiKey) {
     const updates = {
         env: {
             ANTHROPIC_API_KEY: apiKey,
+            ANTHROPIC_AUTH_TOKEN: undefined,
             ANTHROPIC_BASE_URL: undefined,
             ANTHROPIC_MODEL: undefined
         }
     };
-    
-    // Remove undefined values
-    Object.keys(updates.env).forEach(key => {
-        if (updates.env[key] === undefined) {
-            delete updates.env[key];
-        }
-    });
     
     return await updateClaudeConfig(updates);
 }
@@ -114,7 +109,10 @@ function deepMerge(target, source) {
     
     if (isObject(target) && isObject(source)) {
         Object.keys(source).forEach(key => {
-            if (isObject(source[key])) {
+            if (source[key] === undefined) {
+                // Remove keys if explicitly set to undefined
+                delete output[key];
+            } else if (isObject(source[key])) {
                 if (!(key in target)) {
                     Object.assign(output, { [key]: source[key] });
                 } else {

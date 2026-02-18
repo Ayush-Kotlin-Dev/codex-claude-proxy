@@ -27,6 +27,10 @@ console.log(`
 ║    ✓ Real-time streaming                                     ║
 ║    ✓ Multi-account management                                ║
 ║    ✓ OpenAI & Anthropic API compatibility                    ║
+╠══════════════════════════════════════════════════════════════╣
+║  Support:                                                    ║
+║    ★ Give it a star on GitHub!                               ║
+║    https://github.com/Ayush-Kotlin-Dev/codex-claude-proxy    ║
 ╚══════════════════════════════════════════════════════════════╝
 `);
 
