@@ -4,12 +4,14 @@
  *   GET  /claude/config
  *   POST /claude/config/proxy
  *   POST /claude/config/direct
+ *   POST /claude/config/set
  */
 
 import {
   readClaudeConfig,
   setProxyMode,
   setDirectMode,
+  setApiEndpoint,
   getClaudeConfigPath
 } from '../claude-config.js';
 
@@ -72,4 +74,44 @@ export async function handleSetDirectMode(req, res) {
   }
 }
 
-export default { handleGetClaudeConfig, handleSetProxyMode, handleSetDirectMode };
+export async function handleSetClaudeApiEndpoint(req, res) {
+  const { apiUrl, apiKey } = req.body || {};
+
+  if (typeof apiUrl !== 'string' || !apiUrl.trim()) {
+    return res.status(400).json({ success: false, error: 'apiUrl is required' });
+  }
+  if (typeof apiKey !== 'string' || !apiKey.trim()) {
+    return res.status(400).json({ success: false, error: 'apiKey is required' });
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(apiUrl);
+  } catch {
+    return res.status(400).json({ success: false, error: 'apiUrl must be a valid URL' });
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return res.status(400).json({ success: false, error: 'apiUrl must use http or https' });
+  }
+
+  try {
+    const config = await setApiEndpoint({ apiUrl: parsed.toString().replace(/\/$/, ''), apiKey });
+    res.json({
+      success: true,
+      message: 'Claude CLI API endpoint updated',
+      config
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
+
+export default {
+  handleGetClaudeConfig,
+  handleSetProxyMode,
+  handleSetDirectMode,
+  handleSetClaudeApiEndpoint
+};
+
+

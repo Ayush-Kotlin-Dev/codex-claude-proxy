@@ -444,6 +444,22 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        async setClaudeCodeProxyTestConfig() {
+            const { ok, data, error } = await this.api('/claude/config/set', {
+                method: 'POST',
+                body: JSON.stringify({
+                    apiUrl: 'http://localhost:8081',
+                    apiKey: 'test'
+                })
+            });
+
+            if (ok && data?.success) {
+                this.showToast('Updated Claude Code settings.json (API URL + API key).', 'success');
+            } else {
+                this.showToast(data?.error || error || 'Failed to update Claude Code settings.json', 'error');
+            }
+        },
+
         showToast(message, type = 'success') {
             this.toast = { message, type };
             setTimeout(() => { this.toast = null; }, 3000);

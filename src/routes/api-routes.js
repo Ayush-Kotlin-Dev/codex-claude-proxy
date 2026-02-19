@@ -16,7 +16,7 @@ import { handleChatCompletion, handleCountTokens } from './chat-route.js';
 import { handleListModels, handleAccountModels, handleAccountUsage } from './models-route.js';
 import { handleGetHaikuModel, handleSetHaikuModel } from './settings-route.js';
 import { handleGetLogs, handleStreamLogs } from './logs-route.js';
-import { handleGetClaudeConfig, handleSetProxyMode, handleSetDirectMode } from './claude-config-route.js';
+import { handleGetClaudeConfig, handleSetProxyMode, handleSetDirectMode, handleSetClaudeApiEndpoint } from './claude-config-route.js';
 import {
   handleListAccounts,
   handleAccountStatus,
@@ -81,6 +81,7 @@ export function registerApiRoutes(app, { port }) {
   app.get('/claude/config', handleGetClaudeConfig);
   app.post('/claude/config/proxy', (req, res) => handleSetProxyMode(req, res, { port }));
   app.post('/claude/config/direct', handleSetDirectMode);
+  app.post('/claude/config/set', handleSetClaudeApiEndpoint);
 
   // ─── Logs ──────────────────────────────────────────────────────────────────
   app.get('/api/logs', handleGetLogs);
