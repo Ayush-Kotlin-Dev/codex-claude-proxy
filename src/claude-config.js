@@ -100,7 +100,18 @@ export async function setDirectMode(apiKey) {
             ANTHROPIC_MODEL: undefined
         }
     };
-    
+
+    return await updateClaudeConfig(updates);
+}
+
+export async function setApiEndpoint({ apiUrl, apiKey }) {
+    const updates = {
+        env: {
+            ANTHROPIC_BASE_URL: apiUrl,
+            ANTHROPIC_API_KEY: apiKey
+        }
+    };
+
     return await updateClaudeConfig(updates);
 }
 
@@ -137,5 +148,6 @@ export default {
     readClaudeConfigSync,
     updateClaudeConfig,
     setProxyMode,
-    setDirectMode
+    setDirectMode,
+    setApiEndpoint
 };
