@@ -81,13 +81,14 @@ export async function handleAddAccount(req, res) {
 
   // Close any existing server on this port
   if (activeCallbackServers.has(callbackPort)) {
-    try { activeCallbackServers.get(callbackPort).close(); } catch { /* ignore */ }
+    const existing = activeCallbackServers.get(callbackPort);
+    if (existing.abort) existing.abort();
     activeCallbackServers.delete(callbackPort);
   }
 
   let serverResult;
   try {
-    serverResult = startCallbackServer(callbackPort, state, 120000);
+    serverResult = startCallbackServer(state, 120000);
   } catch (err) {
     return res.status(500).json({
       error: 'Failed to start OAuth callback server',
@@ -96,16 +97,16 @@ export async function handleAddAccount(req, res) {
     });
   }
 
-  activeCallbackServers.set(callbackPort, serverResult.server);
+  activeCallbackServers.set(callbackPort, serverResult);
 
   serverResult.promise
     .then(result => {
       activeCallbackServers.delete(callbackPort);
       if (result?.code) {
-        return exchangeCodeForTokens(result.code, verifier)
-          .then(tokens => {
+        return exchangeCodeForTokens(result.code, verifier, callbackPort)
+          .then(async tokens => {
             const accountInfo = extractAccountInfo(tokens);
-            _upsertAccount(accountInfo);
+            await _upsertAccount(accountInfo);
             logger.info(`Added account: ${accountInfo.email}`);
           });
       }
@@ -136,7 +137,7 @@ export async function handleAddAccountManual(req, res) {
     const tokens = await exchangeCodeForTokens(extractedCode, verifier);
     const accountInfo = extractAccountInfo(tokens);
 
-    _upsertAccount(accountInfo);
+    await _upsertAccount(accountInfo);
     logger.info(`Added account via manual OAuth: ${accountInfo.email}`);
     res.json({ success: true, message: `Account ${accountInfo.email} added successfully` });
   } catch (err) {
@@ -254,7 +255,7 @@ export async function handleGetAllQuotas(req, res) {
  * and sets it as the active account.
  * @param {object} accountInfo
  */
-function _upsertAccount(accountInfo) {
+async function _upsertAccount(accountInfo) {
   const data = loadAccounts();
   const existingIndex = data.accounts.findIndex(a => a.email === accountInfo.email);
 
@@ -267,6 +268,15 @@ function _upsertAccount(accountInfo) {
   data.activeAccount = accountInfo.email;
   saveAccounts(data);
   updateAccountAuth(accountInfo);
+  
+  // Fetch initial quota immediately
+  try {
+    const quotaData = await fetchAccountQuota(accountInfo.accessToken, accountInfo.accountId);
+    updateAccountQuota(accountInfo.email, quotaData);
+    logger.info(`Initial quota fetched for: ${accountInfo.email}`);
+  } catch (err) {
+    logger.warn(`Failed to fetch initial quota for ${accountInfo.email}: ${err.message}`);
+  }
 }
 
 export default {

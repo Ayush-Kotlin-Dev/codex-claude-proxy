@@ -7,6 +7,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { refreshAccessToken, extractAccountInfo } from './oauth.js';
+import { getAccountQuota as fetchQuota } from './model-api.js';
 
 const CONFIG_DIR = join(homedir(), '.codex-claude-proxy');
 const ACCOUNTS_FILE = join(CONFIG_DIR, 'accounts.json');
@@ -247,6 +248,16 @@ async function refreshAccountToken(email) {
         }
         
         console.log(`[AccountManager] Token refreshed for: ${email}`);
+        
+        // Auto-fetch quota after refresh
+        try {
+            const quotaData = await fetchQuota(tokens.accessToken, accountInfo.accountId);
+            updateAccountQuota(email, quotaData);
+            console.log(`[AccountManager] Quota refreshed for: ${email}`);
+        } catch (qErr) {
+            console.warn(`[AccountManager] Failed to auto-fetch quota for ${email}: ${qErr.message}`);
+        }
+
         return { success: true, message: `Token refreshed for: ${email}` };
     } catch (error) {
         console.error(`[AccountManager] Token refresh failed for ${email}:`, error.message);
@@ -412,11 +423,17 @@ function importFromCodex() {
 
 function getStatus() {
     const data = loadAccounts();
-    const accounts = data.accounts.map(a => ({
-        email: a.email,
-        planType: a.planType,
-        isActive: a.email === data.activeAccount
-    }));
+    const accounts = data.accounts.map(a => {
+        const info = extractAccountInfo(a.accessToken);
+        return {
+            email: a.email,
+            planType: a.planType,
+            isActive: a.email === data.activeAccount,
+            quota: a.quota || null,
+            tokenExpired: info?.expiresAt ? info.expiresAt < Date.now() : false,
+            lastUsed: a.lastUsed
+        };
+    });
     
     return {
         total: data.accounts.length,

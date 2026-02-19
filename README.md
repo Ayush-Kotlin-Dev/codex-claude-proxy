@@ -71,18 +71,39 @@ codex-claude-proxy start
 
 ## 🚦 Quick Start
 
-1. **Start the Proxy**:
-   ```bash
-   npx codex-claude-proxy@latest start
-   ```
-   The server will start at `http://localhost:8081`.
+### 1. Start the Proxy
 
-2. **Add Your Account**:
-   - Open the dashboard at **[http://localhost:8081](http://localhost:8081)**.
-   - Go to the **Accounts** tab.
-   - Click **Add Account** and login with your ChatGPT account.
+```bash
+npx codex-claude-proxy@latest start
+```
+The server will start at `http://localhost:8081`.
 
-3. **Configure Claude Code**:
+### 2. Add Your Account
+
+#### **Option A: Web Dashboard (Local Desktop)**
+
+1. Open the dashboard at **[http://localhost:8081](http://localhost:8081)**
+2. Go to the **Accounts** tab
+3. Click **Add Account** and login with your ChatGPT account
+
+#### **Option B: CLI (Desktop or Headless/VM)**
+
+```bash
+# Desktop (opens browser)
+codex-claude-proxy accounts add
+
+# Headless/VM server (manual code input)
+codex-claude-proxy accounts add --no-browser
+```
+
+For **headless/VM servers** without a browser:
+1. Run the command with `--no-browser`
+2. It will print a URL - copy and open it on a device with a browser
+3. Complete login on that device
+4. After redirect, copy the callback URL (or just the code)
+5. Paste it back in the terminal
+
+### 3. Configure Claude Code
    Run this command to automatically configure your `claude` CLI to use the proxy:
    ```bash
    curl -X POST http://localhost:8081/claude/config/proxy

@@ -19,6 +19,7 @@ const OAUTH_CONFIG = {
     userInfoUrl: 'https://api.openai.com/v1/me',
     scopes: ['openid', 'profile', 'email', 'offline_access'],
     callbackPort: 1455,
+    callbackFallbackPorts: [1456, 1457, 1458, 1459, 1460],
     callbackPath: '/auth/callback'
 };
 
@@ -222,74 +223,86 @@ function getPKCEData(state) {
 }
 
 /**
- * Start local callback server
- * @param {number} port - Port to listen on
+ * Attempt to bind server to a specific port
+ * @param {http.Server} server - HTTP server instance
+ * @param {number} port - Port to bind to
+ * @param {string} host - Host to bind to
+ * @returns {Promise<number>} Resolves with port on success, rejects on error
+ */
+function tryBindPort(server, port, host = '0.0.0.0') {
+    return new Promise((resolve, reject) => {
+        const onError = (err) => {
+            server.removeListener('listening', onSuccess);
+            reject(err);
+        };
+        const onSuccess = () => {
+            server.removeListener('error', onError);
+            resolve(port);
+        };
+        server.once('error', onError);
+        server.once('listening', onSuccess);
+        server.listen(port, host);
+    });
+}
+
+/**
+ * Start local callback server with port fallback and abort support
  * @param {string} expectedState - Expected state for validation
  * @param {number} timeoutMs - Timeout in milliseconds
- * @returns {{promise: Promise<string>, server: http.Server}}
+ * @returns {{promise: Promise<string>, abort: Function, getPort: Function}}
  */
-function startCallbackServer(port, expectedState, timeoutMs = 120000) {
+function startCallbackServer(expectedState, timeoutMs = 120000) {
     let server = null;
     let timeoutId = null;
-    let resolvePromise, rejectPromise;
-    
-    const promise = new Promise((resolve, reject) => {
-        resolvePromise = resolve;
-        rejectPromise = reject;
-        
+    let isAborted = false;
+    let actualPort = OAUTH_CONFIG.callbackPort;
+    const host = process.env.HOST || '0.0.0.0';
+
+    const promise = new Promise(async (resolve, reject) => {
+        const portsToTry = [OAUTH_CONFIG.callbackPort, ...(OAUTH_CONFIG.callbackFallbackPorts || [])];
+        const errors = [];
+
         server = http.createServer((req, res) => {
-            const url = new URL(req.url, `http://localhost:${port}`);
+            const url = new URL(req.url, `http://${host === '0.0.0.0' ? 'localhost' : host}:${actualPort}`);
             console.log(`[OAuth] Received request: ${req.method} ${req.url}`);
-            
-            // Handle both /auth/callback and /success (often seen in simplified flow)
+
             if (url.pathname !== OAUTH_CONFIG.callbackPath && url.pathname !== '/success') {
                 res.writeHead(404);
                 res.end('Not found');
                 return;
             }
-            
+
             const code = url.searchParams.get('code');
             const state = url.searchParams.get('state');
             const error = url.searchParams.get('error');
             const idToken = url.searchParams.get('id_token');
-            
+
             if (error) {
-                console.error(`[OAuth] Error in callback: \${error}`);
+                console.error(`[OAuth] Error in callback: ${error}`);
                 res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end(getErrorHtml(error));
                 server.close();
-                rejectPromise(new Error(`OAuth error: \${error}`));
+                reject(new Error(`OAuth error: ${error}`));
                 return;
             }
-            
-            // Capture code but don't close until we show a success page
+
             if (code) {
                 console.log('[OAuth] Got authorization code');
-                
-                // Success!
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end(getSuccessHtml('Authentication Successful! You can close this window.'));
                 
-                // Delay closing slightly so the browser can finish loading the page
                 setTimeout(() => {
                     server.close();
                     clearTimeout(timeoutId);
-                    resolvePromise(code);
+                    resolve(code);
                 }, 1000);
                 return;
             }
-            
-            // Handle /success redirect that might happen after or instead of callback
+
             if (url.pathname === '/success' || idToken) {
                 console.log('[OAuth] At success page');
                 res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end(getSuccessHtml('Login Successful!'));
-                
-                // If we don't have a code yet, we can't resolve. 
-                // But if this is a follow-up redirect, we might already have resolved.
-                if (idToken && !code) {
-                   console.log('[OAuth] Got id_token in success page, but no code yet.');
-                }
                 return;
             }
 
@@ -297,24 +310,80 @@ function startCallbackServer(port, expectedState, timeoutMs = 120000) {
             res.end('Waiting for authorization code...');
         });
 
-        // Success case is handled via global getSuccessHtml now
-        
-        server.on('error', (err) => {
-            clearTimeout(timeoutId);
-            rejectPromise(new Error(`Failed to start callback server: ${err.message}`));
-        });
-        
-        server.listen(port, () => {
-            console.log(`[OAuth] Callback server listening on http://localhost:${port}`);
-        });
-        
+        // Try ports with fallback logic (Windows EACCES fix)
+        let boundSuccessfully = false;
+        for (const port of portsToTry) {
+            try {
+                await tryBindPort(server, port, host);
+                actualPort = port;
+                boundSuccessfully = true;
+
+                if (port !== OAUTH_CONFIG.callbackPort) {
+                    console.log(`[OAuth] Primary port ${OAUTH_CONFIG.callbackPort} unavailable, using fallback port ${port}`);
+                } else {
+                    console.log(`[OAuth] Callback server listening on ${host}:${port}`);
+                }
+                break;
+            } catch (err) {
+                const errMsg = err.code === 'EACCES'
+                    ? `Permission denied on port ${port}`
+                    : err.code === 'EADDRINUSE'
+                    ? `Port ${port} already in use`
+                    : `Failed to bind port ${port}: ${err.message}`;
+                errors.push(errMsg);
+                console.log(`[OAuth] ${errMsg}`);
+            }
+        }
+
+        if (!boundSuccessfully) {
+            const isWindows = process.platform === 'win32';
+            let errorMsg = `Failed to start OAuth callback server.\nTried ports: ${portsToTry.join(', ')}\n\nErrors:\n${errors.join('\n')}`;
+
+            if (isWindows) {
+                errorMsg += `\n
+================== WINDOWS TROUBLESHOOTING ==================
+The default port range may be reserved by Hyper-V/WSL2/Docker.
+
+Option 1: Use a custom port
+  Set OAUTH_CALLBACK_PORT=3456 in your environment
+
+Option 2: Reset Windows NAT (run as Administrator)
+  net stop winnat && net start winnat
+
+Option 3: Check reserved port ranges
+  netsh interface ipv4 show excludedportrange protocol=tcp
+==============================================================`;
+            } else {
+                errorMsg += `\n\nTry setting a custom port via environment variable.`;
+            }
+
+            reject(new Error(errorMsg));
+            return;
+        }
+
         timeoutId = setTimeout(() => {
-            server.close();
-            rejectPromise(new Error('OAuth callback timeout'));
+            if (!isAborted) {
+                server.close();
+                reject(new Error('OAuth callback timeout - no response received'));
+            }
         }, timeoutMs);
     });
-    
-    return { promise, server };
+
+    const abort = () => {
+        if (isAborted) return;
+        isAborted = true;
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+        }
+        if (server) {
+            server.close();
+            console.log('[OAuth] Callback server aborted (manual completion)');
+        }
+    };
+
+    const getPort = () => actualPort;
+
+    return { promise, abort, getPort };
 }
 
 /**

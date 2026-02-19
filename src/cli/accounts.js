@@ -168,6 +168,7 @@ function extractCodeFromInput(input) {
         try {
             const url = new URL(trimmed);
             const code = url.searchParams.get('code');
+            const state = url.searchParams.get('state');
             const error = url.searchParams.get('error');
 
             if (error) {
@@ -178,7 +179,7 @@ function extractCodeFromInput(input) {
                 throw new Error('No authorization code found in URL');
             }
 
-            return { code };
+            return { code, state };
         } catch (e) {
             if (e.message.includes('OAuth error') || e.message.includes('No authorization code')) {
                 throw e;
@@ -191,7 +192,7 @@ function extractCodeFromInput(input) {
         throw new Error('Input is too short to be a valid authorization code');
     }
 
-    return { code: trimmed };
+    return { code: trimmed, state: null };
 }
 
 function openBrowser(url) {
@@ -274,7 +275,12 @@ async function addAccountManual(rl) {
     const input = await rl.question('Paste the callback URL or authorization code: ');
 
     try {
-        const { code } = extractCodeFromInput(input);
+        const { code, state: extractedState } = extractCodeFromInput(input);
+
+        if (extractedState && extractedState !== state) {
+            console.log('\n⚠ State mismatch detected. This could indicate a security issue.');
+            console.log('Proceeding anyway as this is manual mode...');
+        }
 
         console.log('\nExchanging authorization code for tokens...');
         const tokens = await exchangeCodeForTokens(code, verifier, OAUTH_CONFIG.callbackPort);
@@ -287,10 +293,7 @@ async function addAccountManual(rl) {
             email: accountInfo?.email || 'unknown',
             accountId: accountInfo?.accountId,
             planType: accountInfo?.planType || 'free',
-            accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
-            idToken: tokens.idToken,
-            expiresAt: accountInfo?.expiresAt || (Date.now() + tokens.expiresIn * 1000),
             addedAt: new Date().toISOString(),
             lastUsed: null
         };
@@ -313,7 +316,7 @@ async function addAccountManual(rl) {
     }
 }
 
-async function addAccountBrowser() {
+async function addAccountBrowser(rl) {
     console.log('\n=== Add ChatGPT Account ===\n');
 
     const { verifier } = generatePKCE();
@@ -325,11 +328,51 @@ async function addAccountBrowser() {
     console.log(`   ${url}\n`);
 
     openBrowser(url);
+
+    console.log('After authorization, paste the callback URL or code here.\n');
     
-    console.log('After authorization, complete the flow via:');
-    console.log(`  curl -X POST http://localhost:${DEFAULT_PORT}/accounts/add/manual \\`);
-    console.log(`    -H "Content-Type: application/json" \\`);
-    console.log(`    -d '{"code":"<auth_code>","verifier":"${verifier}"}'`);
+    const input = await rl.question('Paste the callback URL or authorization code: ');
+
+    try {
+        const { code, state: extractedState } = extractCodeFromInput(input);
+
+        if (extractedState && extractedState !== state) {
+            console.log('\n⚠ State mismatch detected. This could indicate a security issue.');
+            console.log('Proceeding anyway...');
+        }
+
+        console.log('\nExchanging authorization code for tokens...');
+        const tokens = await exchangeCodeForTokens(code, verifier, OAUTH_CONFIG.callbackPort);
+        const accountInfo = extractAccountInfo(tokens.accessToken);
+
+        const data = loadAccounts();
+        
+        const existingIndex = data.accounts.findIndex(a => a.email === accountInfo?.email);
+        const newAccount = {
+            email: accountInfo?.email || 'unknown',
+            accountId: accountInfo?.accountId,
+            planType: accountInfo?.planType || 'free',
+            refreshToken: tokens.refreshToken,
+            addedAt: new Date().toISOString(),
+            lastUsed: null
+        };
+
+        if (existingIndex >= 0) {
+            data.accounts[existingIndex] = newAccount;
+            console.log(`\n⚠ Account ${newAccount.email} already exists. Updating tokens.`);
+        } else {
+            data.accounts.push(newAccount);
+            if (!data.activeAccount) {
+                data.activeAccount = newAccount.email;
+            }
+        }
+
+        saveAccounts(data);
+        console.log(`\n✓ Successfully authenticated: ${newAccount.email}`);
+        
+    } catch (error) {
+        console.error(`\n✗ Authentication failed: ${error.message}`);
+    }
 }
 
 async function listAccounts() {
@@ -361,6 +404,88 @@ async function clearAccounts(rl) {
     }
 }
 
+async function interactiveRemove(rl) {
+    while (true) {
+        const data = loadAccounts();
+        if (!data.accounts || data.accounts.length === 0) {
+            console.log('\nNo accounts to remove.');
+            return;
+        }
+
+        displayAccounts(data);
+        console.log('\nEnter account number to remove (or 0 to cancel)');
+
+        const answer = await rl.question('> ');
+        const index = parseInt(answer, 10);
+
+        if (isNaN(index) || index < 0 || index > data.accounts.length) {
+            console.log('\n❌ Invalid selection.');
+            continue;
+        }
+
+        if (index === 0) {
+            return;
+        }
+
+        const removed = data.accounts[index - 1];
+        const confirm = await rl.question(`\nAre you sure you want to remove ${removed.email}? [y/N]: `);
+
+        if (confirm.toLowerCase() === 'y') {
+            data.accounts.splice(index - 1, 1);
+            if (data.activeAccount === removed.email) {
+                data.activeAccount = data.accounts[0]?.email || null;
+            }
+            saveAccounts(data);
+            console.log(`\n✓ Removed ${removed.email}`);
+        } else {
+            console.log('\nCancelled.');
+        }
+
+        if (data.accounts.length === 0) {
+            return;
+        }
+
+        const removeMore = await rl.question('\nRemove another account? [y/N]: ');
+        if (removeMore.toLowerCase() !== 'y') {
+            break;
+        }
+    }
+}
+
+async function verifyAccounts() {
+    const data = loadAccounts();
+
+    if (!data.accounts || data.accounts.length === 0) {
+        console.log('No accounts to verify.');
+        return;
+    }
+
+    console.log('\nVerifying accounts...\n');
+
+    for (const account of data.accounts) {
+        try {
+            const response = await fetch(OAUTH_CONFIG.tokenUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    grant_type: 'refresh_token',
+                    refresh_token: account.refreshToken,
+                    client_id: OAUTH_CONFIG.clientId
+                })
+            });
+
+            if (response.ok) {
+                console.log(`  ✓ ${account.email} - OK`);
+            } else {
+                const error = await response.text();
+                console.log(`  ✗ ${account.email} - ${response.status}: ${error}`);
+            }
+        } catch (error) {
+            console.log(`  ✗ ${account.email} - ${error.message}`);
+        }
+    }
+}
+
 async function main() {
     const args = process.argv.slice(2);
     const command = args[0] || 'help';
@@ -381,11 +506,18 @@ async function main() {
                     await addAccountManual(rl);
                 } else {
                     await ensureServerStopped(port);
-                    await addAccountBrowser();
+                    await addAccountBrowser(rl);
                 }
                 break;
             case 'list':
                 await listAccounts();
+                break;
+            case 'remove':
+                await ensureServerStopped(port);
+                await interactiveRemove(rl);
+                break;
+            case 'verify':
+                await verifyAccounts();
                 break;
             case 'clear':
                 await ensureServerStopped(port);
@@ -394,14 +526,20 @@ async function main() {
             case 'help':
             default:
                 console.log('\nUsage:');
-                console.log('  node src/cli/accounts.js add           Add account (opens browser)');
-                console.log('  node src/cli/accounts.js add --no-browser  Add account (manual code)');
-                console.log('  node src/cli/accounts.js list         List all accounts');
-                console.log('  node src/cli/accounts.js clear        Remove all accounts');
-                console.log('  node src/cli/accounts.js help         Show this help');
+                console.log('  codex-claude-proxy accounts add           Add account (opens browser)');
+                console.log('  codex-claude-proxy accounts add --no-browser  Add account (manual code)');
+                console.log('  codex-claude-proxy accounts list         List all accounts');
+                console.log('  codex-claude-proxy accounts remove       Remove accounts interactively');
+                console.log('  codex-claude-proxy accounts verify       Verify account tokens');
+                console.log('  codex-claude-proxy accounts clear        Remove all accounts');
+                console.log('  codex-claude-proxy accounts help         Show this help');
                 console.log('\nOptions:');
-                console.log('  --no-browser    Manual authorization code input (for headless servers)');
+                console.log('  --no-browser    Manual authorization code input (for headless/VM servers)');
                 console.log('  --port=<port>   Server port (default: 8081)');
+                console.log('\nHeadless/VM Usage:');
+                console.log('  1. Run: codex-claude-proxy accounts add --no-browser');
+                console.log('  2. Copy the URL shown and open in browser on another device');
+                console.log('  3. After login, paste the callback URL back in terminal');
                 break;
         }
     } finally {

@@ -5,12 +5,27 @@
 import { convertAnthropicToOpenAIChat, convertOpenAIChatToAnthropic } from './kilo-format-converter.js';
 import { streamOpenAIChat } from './kilo-streamer.js';
 
+import fs from 'fs';
+import path from 'path';
+
 const KILO_API_URL = 'https://api.kilo.ai/api/openrouter/chat/completions';
+
+// Read telemetry ID for machine identification
+let telemetryId = 'anonymous';
+try {
+    const telemetryPath = path.resolve('telemetry-id');
+    if (fs.existsSync(telemetryPath)) {
+        telemetryId = fs.readFileSync(telemetryPath, 'utf8').trim();
+    }
+} catch (e) {
+    console.warn('Failed to read telemetry-id:', e.message);
+}
 
 const KILO_HEADERS = {
     Authorization: 'Bearer anonymous',
     'User-Agent': 'opencode-kilo-provider',
-    'HTTP-Referer': 'https://kilo.ai'
+    'HTTP-Referer': 'https://kilo.ai',
+    'X-KiloCode-MachineId': telemetryId // used for telemetry , rate limiting 
 };
 
 function buildError(status, message) {
