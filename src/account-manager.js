@@ -24,6 +24,7 @@ const DEFAULT_ACCOUNTS = {
 
 let autoRefreshIntervalId = null;
 const tokenCache = new Map();
+let accountsData = null;
 
 function ensureConfigDir() {
     if (!existsSync(CONFIG_DIR)) {
@@ -48,24 +49,45 @@ function getAccountAuthFile(email) {
 }
 
 function loadAccounts() {
+    if (accountsData !== null) {
+        return accountsData;
+    }
+    
     ensureConfigDir();
     
     if (!existsSync(ACCOUNTS_FILE)) {
-        return { ...DEFAULT_ACCOUNTS };
+        accountsData = { ...DEFAULT_ACCOUNTS };
+        return accountsData;
     }
     
     try {
         const data = JSON.parse(readFileSync(ACCOUNTS_FILE, 'utf8'));
-        return { ...DEFAULT_ACCOUNTS, ...data };
+        accountsData = { ...DEFAULT_ACCOUNTS, ...data };
+        return accountsData;
     } catch (e) {
         console.error('[AccountManager] Error loading accounts:', e.message);
-        return { ...DEFAULT_ACCOUNTS };
+        accountsData = { ...DEFAULT_ACCOUNTS };
+        return accountsData;
     }
 }
 
 function saveAccounts(data) {
     ensureConfigDir();
+    accountsData = data;
     writeFileSync(ACCOUNTS_FILE, JSON.stringify(data, null, 2), { mode: 0o600 });
+}
+
+function save() {
+    if (accountsData === null) {
+        loadAccounts();
+    }
+    ensureConfigDir();
+    writeFileSync(ACCOUNTS_FILE, JSON.stringify(accountsData, null, 2), { mode: 0o600 });
+}
+
+function getAccount(email) {
+    const data = loadAccounts();
+    return data.accounts.find(a => a.email === email) || null;
 }
 
 function getActiveAccount() {
@@ -456,6 +478,8 @@ function ensureAccountsPersist() {
 export {
     loadAccounts,
     saveAccounts,
+    save,
+    getAccount,
     getActiveAccount,
     setActiveAccount,
     removeAccount,
@@ -496,5 +520,7 @@ export default {
     stopAutoRefresh,
     isTokenExpiredOrExpiringSoon,
     getCachedToken,
-    setCachedToken
+    setCachedToken,
+    save,
+    getAccount
 };

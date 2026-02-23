@@ -5,7 +5,8 @@ import { CONFIG_DIR } from './account-manager.js';
 const SETTINGS_FILE = join(CONFIG_DIR, 'settings.json');
 
 const DEFAULT_SETTINGS = {
-    haikuKiloModel: 'glm-5'
+    haikuKiloModel: 'glm-5',
+    accountStrategy: 'sticky'
 };
 
 function ensureConfigDir() {

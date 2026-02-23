@@ -7,7 +7,8 @@
 import {
   getActiveAccount,
   refreshAccountToken,
-  isTokenExpiredOrExpiringSoon
+  isTokenExpiredOrExpiringSoon,
+  loadAccounts
 } from '../account-manager.js';
 import { logger } from '../utils/logger.js';
 
@@ -61,6 +62,46 @@ export async function getCredentialsOrError() {
 }
 
 /**
+ * Get credentials for a specific account by email.
+ * @param {string} email
+ * @returns {Promise<{accessToken: string, accountId: string, email: string}|null>}
+ */
+export async function getCredentialsForAccount(email) {
+  const data = loadAccounts();
+  const account = data.accounts.find(a => a.email === email);
+
+  if (!account) {
+    return null;
+  }
+
+  if (!account.accessToken || !account.accountId) {
+    return null;
+  }
+
+  if (isTokenExpiredOrExpiringSoon(account)) {
+    const result = await refreshAccountToken(account.email);
+    if (!result.success) {
+      return null;
+    }
+    const refreshedData = loadAccounts();
+    const refreshedAccount = refreshedData.accounts.find(a => a.email === email);
+    if (!refreshedAccount) return null;
+
+    return {
+      accessToken: refreshedAccount.accessToken,
+      accountId: refreshedAccount.accountId,
+      email: refreshedAccount.email
+    };
+  }
+
+  return {
+    accessToken: account.accessToken,
+    accountId: account.accountId,
+    email: account.email
+  };
+}
+
+/**
  * Sends a 401 authentication error response.
  * @param {import('express').Response} res
  * @param {string} [message]
@@ -72,4 +113,4 @@ export function sendAuthError(res, message = 'No active account with valid crede
   });
 }
 
-export default { getCredentialsOrError, sendAuthError };
+export default { getCredentialsOrError, getCredentialsForAccount, sendAuthError };

@@ -8,10 +8,41 @@ import { streamResponsesAPI, parseResponsesAPIResponse } from './response-stream
 
 const API_URL = 'https://chatgpt.com/backend-api/codex/responses';
 
+function parseResetTime(response, errorText) {
+    const retryAfter = response.headers?.get?.('retry-after');
+    if (retryAfter) {
+        const seconds = parseInt(retryAfter, 10);
+        if (!isNaN(seconds)) return seconds * 1000;
+    }
+    
+    const ratelimitReset = response.headers?.get?.('x-ratelimit-reset');
+    if (ratelimitReset) {
+        const timestamp = parseInt(ratelimitReset, 10) * 1000;
+        const wait = timestamp - Date.now();
+        if (wait > 0) return wait;
+    }
+    
+    if (errorText) {
+        const delayMatch = errorText.match(/quotaResetDelay[:\s"]+(\d+(?:\.\d+)?)(ms|s)/i);
+        if (delayMatch) {
+            const value = parseFloat(delayMatch[1]);
+            return delayMatch[2] === 's' ? value * 1000 : value;
+        }
+        
+        const secMatch = errorText.match(/retry\s+(?:after\s+)?(\d+)\s*(?:sec|s\b)/i);
+        if (secMatch) {
+            return parseInt(secMatch[1], 10) * 1000;
+        }
+    }
+    
+    return 60000;
+}
+
 /**
  * Send a streaming request to ChatGPT API
  */
-export async function* sendMessageStream(anthropicRequest, accessToken, accountId) {
+export async function* sendMessageStream(anthropicRequest, accessToken, accountId, accountRotator = null, currentEmail = null) {
+    const modelId = anthropicRequest.model;
     const request = convertAnthropicToResponsesAPI(anthropicRequest);
     
     const response = await fetch(API_URL, {
@@ -29,11 +60,18 @@ export async function* sendMessageStream(anthropicRequest, accessToken, accountI
         const errorText = await response.text();
         
         if (response.status === 401) {
+            if (accountRotator && currentEmail) {
+                accountRotator.markInvalid(currentEmail, 'Token expired or revoked');
+            }
             throw new Error('AUTH_EXPIRED: Token expired or revoked. Please re-authenticate.');
         }
         
         if (response.status === 429) {
-            throw new Error(`RATE_LIMITED: ${errorText}`);
+            const resetMs = parseResetTime(response, errorText);
+            if (accountRotator && currentEmail) {
+                accountRotator.markRateLimited(currentEmail, resetMs, modelId);
+            }
+            throw new Error(`RATE_LIMITED:${resetMs}:${errorText}`);
         }
         
         if (response.status === 403) {
@@ -117,7 +155,10 @@ export async function sendMessage(anthropicRequest, accessToken, accountId) {
     };
 }
 
+export { parseResetTime };
+
 export default {
     sendMessageStream,
-    sendMessage
+    sendMessage,
+    parseResetTime
 };

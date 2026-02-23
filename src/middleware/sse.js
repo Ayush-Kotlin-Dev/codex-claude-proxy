@@ -64,7 +64,23 @@ export function handleStreamError(res, error, model, startTime) {
     });
   }
 
-  if (error.message.includes('RATE_LIMITED')) {
+  if (error.message.startsWith('RATE_LIMITED:')) {
+    const parts = error.message.split(':');
+    const resetMs = parseInt(parts[1], 10);
+    const errorText = parts.slice(2).join(':') || error.message;
+
+    return res.status(429).json({
+      type: 'error',
+      error: {
+        type: 'rate_limit_error',
+        message: errorText,
+        resetMs: resetMs,
+        resetSeconds: Math.round(resetMs / 1000)
+      }
+    });
+  }
+
+  if (error.message.includes('RESOURCE_EXHAUSTED')) {
     return res.status(429).json({
       type: 'error',
       error: { type: 'rate_limit_error', message: error.message }
