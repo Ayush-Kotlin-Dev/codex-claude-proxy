@@ -13,7 +13,9 @@ document.addEventListener('alpine:init', () => {
         stats: { total: 0, active: 0, expired: 0, planType: '-' },
 
         haikuKiloModel: 'glm-5',
+        accountStrategy: 'sticky',
         haikuModelSaving: false,
+        strategySaving: false,
 
         showAddModal: false,
         showDeleteModal: false,
@@ -87,6 +89,7 @@ document.addEventListener('alpine:init', () => {
             setInterval(() => this.checkHealth(), 30000);
             this.startLogStream();
             this.loadHaikuModelSetting();
+            this.loadAccountStrategySetting();
 
             window.addEventListener('resize', () => {
                 this.sidebarOpen = window.innerWidth >= 1024;
@@ -441,6 +444,29 @@ document.addEventListener('alpine:init', () => {
                 this.showToast(`Haiku routed to ${data.haikuKiloModel.toUpperCase()}`, 'success');
             } else {
                 this.showToast(data?.error || 'Failed to update Haiku model', 'error');
+            }
+        },
+
+        async loadAccountStrategySetting() {
+            const { ok, data } = await this.api('/settings/account-strategy');
+            if (ok && data?.accountStrategy) {
+                this.accountStrategy = data.accountStrategy;
+            }
+        },
+
+        async setAccountStrategy(strategy) {
+            if (this.strategySaving || this.accountStrategy === strategy) return;
+            this.strategySaving = true;
+            const { ok, data } = await this.api('/settings/account-strategy', {
+                method: 'POST',
+                body: JSON.stringify({ accountStrategy: strategy })
+            });
+            this.strategySaving = false;
+            if (ok && data?.accountStrategy) {
+                this.accountStrategy = data.accountStrategy;
+                this.showToast(`Account strategy set to ${data.accountStrategy === 'sticky' ? 'Sticky' : 'Round-Robin'}`, 'success');
+            } else {
+                this.showToast(data?.error || 'Failed to update strategy', 'error');
             }
         },
 

@@ -6,19 +6,27 @@ import { initSSEResponse, pipeSSEStream, handleStreamError } from '../middleware
 import { logger } from '../utils/logger.js';
 import { AccountRotator } from '../account-rotation/index.js';
 import { listAccounts, getActiveAccount, save } from '../account-manager.js';
+import { getServerSettings } from '../server-settings.js';
 
 const MAX_RETRIES = 5;
 const MAX_WAIT_BEFORE_ERROR_MS = 120000;
 const SHORT_RATE_LIMIT_THRESHOLD_MS = 5000;
 
 let accountRotator = null;
+let currentStrategy = null;
+
 function getAccountRotator() {
-    if (!accountRotator) {
+    const settings = getServerSettings();
+    const strategy = settings.accountStrategy || 'sticky';
+    
+    if (!accountRotator || currentStrategy !== strategy) {
         accountRotator = new AccountRotator({
             listAccounts,
             save,
             getActiveAccount
-        }, 'sticky');
+        }, strategy);
+        currentStrategy = strategy;
+        logger.info(`[Messages] Account strategy: ${strategy}`);
     }
     return accountRotator;
 }

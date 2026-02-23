@@ -14,7 +14,7 @@ import { getStatus, ACCOUNTS_FILE } from '../account-manager.js';
 import { handleMessages } from './messages-route.js';
 import { handleChatCompletion, handleCountTokens } from './chat-route.js';
 import { handleListModels, handleAccountModels, handleAccountUsage } from './models-route.js';
-import { handleGetHaikuModel, handleSetHaikuModel } from './settings-route.js';
+import { handleGetHaikuModel, handleSetHaikuModel, handleGetAccountStrategy, handleSetAccountStrategy } from './settings-route.js';
 import { handleGetLogs, handleStreamLogs } from './logs-route.js';
 import { handleGetClaudeConfig, handleSetProxyMode, handleSetDirectMode, handleSetClaudeApiEndpoint } from './claude-config-route.js';
 import {
@@ -59,8 +59,10 @@ export function registerApiRoutes(app, { port }) {
   // ─── Settings ──────────────────────────────────────────────────────────────
   app.get('/settings/haiku-model', handleGetHaikuModel);
   app.post('/settings/haiku-model', handleSetHaikuModel);
+  app.get('/settings/account-strategy', handleGetAccountStrategy);
+  app.post('/settings/account-strategy', handleSetAccountStrategy);
 
-  // ─── Account Management ────────────────────────────────────────────────────
+  // ─── Account Management ───────────────────────────────────────────────────
   app.get('/accounts', handleListAccounts);
   app.get('/accounts/status', handleAccountStatus);
   app.get('/accounts/quota', handleGetQuota);

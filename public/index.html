@@ -627,6 +627,27 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="view-card mt-6">
+                    <div class="flex items-center gap-2.5 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-4 h-4 text-neon-purple">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                        </svg>
+                        <h3 class="text-xs font-mono text-gray-400 uppercase tracking-widest">Account Selection Strategy</h3>
+                    </div>
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <div class="text-sm text-gray-300">Strategy</div>
+                            <div class="text-xs text-gray-500 font-mono">How accounts are selected when rate-limited</div>
+                        </div>
+                        <div class="inline-flex items-center gap-2">
+                            <button class="btn btn-xs" :class="accountStrategy === 'sticky' ? 'bg-neon-purple text-white' : 'btn-outline text-gray-400'"
+                                @click="setAccountStrategy('sticky')" :disabled="strategySaving">Sticky</button>
+                            <button class="btn btn-xs" :class="accountStrategy === 'round-robin' ? 'bg-neon-purple text-white' : 'btn-outline text-gray-400'"
+                                @click="setAccountStrategy('round-robin')" :disabled="strategySaving">Round-Robin</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
