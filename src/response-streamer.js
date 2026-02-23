@@ -4,10 +4,13 @@
  */
 
 import { generateMessageId } from './format-converter.js';
+import { cacheSignature, cacheThinkingSignature, SIGNATURE_CONSTANTS } from './signature-cache.js';
+
+const { MIN_SIGNATURE_LENGTH } = SIGNATURE_CONSTANTS;
 
 /**
  * Stream OpenAI Responses API SSE events and yield Anthropic-format events
- * 
+ *
  * OpenAI Responses API event types:
  * - response.created
  * - response.in_progress
@@ -17,7 +20,7 @@ import { generateMessageId } from './format-converter.js';
  * - response.function_call_arguments.done
  * - response.output_item.done
  * - response.completed
- * 
+ *
  * Anthropic event types:
  * - message_start
  * - content_block_start
@@ -25,7 +28,7 @@ import { generateMessageId } from './format-converter.js';
  * - content_block_stop
  * - message_delta
  * - message_stop
- * 
+ *
  * @param {Response} response - The HTTP response with SSE body
  * @param {string} model - The model name
  * @yields {Object} Anthropic-format SSE events
@@ -37,6 +40,7 @@ export async function* streamResponsesAPI(response, model) {
     let currentBlockType = null;
     let currentBlockId = null;
     let currentToolName = null;
+    let currentThinkingSignature = '';
     let inputTokens = 0;
     let outputTokens = 0;
     let stopReason = 'end_turn';
@@ -100,8 +104,20 @@ export async function* streamResponsesAPI(response, model) {
                         };
                     }
 
-                    // Close previous block if any
+                    // Close previous block if any (with signature_delta for thinking)
                     if (currentBlockType !== null) {
+                        // Emit signature_delta before closing thinking block
+                        if (currentBlockType === 'thinking' && currentThinkingSignature) {
+                            yield {
+                                event: 'content_block_delta',
+                                data: {
+                                    type: 'content_block_delta',
+                                    index: blockIndex,
+                                    delta: { type: 'signature_delta', signature: currentThinkingSignature }
+                                }
+                            };
+                            currentThinkingSignature = '';
+                        }
                         yield {
                             event: 'content_block_stop',
                             data: { type: 'content_block_stop', index: blockIndex }
@@ -143,6 +159,8 @@ export async function* streamResponsesAPI(response, model) {
                     } else if (item.type === 'reasoning') {
                         currentBlockType = 'thinking';
                         currentBlockId = item.id;
+                        currentThinkingSignature = '';
+                        
                         yield {
                             event: 'content_block_start',
                             data: {
@@ -169,6 +187,28 @@ export async function* streamResponsesAPI(response, model) {
                     }
                 }
 
+                // Handle thinking/reasoning delta
+                if (eventType === 'response.reasoning.delta' || eventType === 'response.thinking.delta') {
+                    const delta = event.delta || event.thinking;
+                    if (delta && currentBlockType === 'thinking') {
+                        // Check for signature in the event
+                        if (event.signature && event.signature.length >= MIN_SIGNATURE_LENGTH) {
+                            currentThinkingSignature = event.signature;
+                            // Cache the signature with model family
+                            cacheThinkingSignature(event.signature, 'openai');
+                        }
+                        
+                        yield {
+                            event: 'content_block_delta',
+                            data: {
+                                type: 'content_block_delta',
+                                index: blockIndex,
+                                delta: { type: 'thinking_delta', thinking: delta }
+                            }
+                        };
+                    }
+                }
+
                 // Handle function call arguments delta
                 if (eventType === 'response.function_call_arguments.delta') {
                     const delta = event.delta;
@@ -187,12 +227,28 @@ export async function* streamResponsesAPI(response, model) {
 
                 // Handle function call arguments done
                 if (eventType === 'response.function_call_arguments.done') {
-                    // Arguments complete - nothing special needed, already streamed
+                    // Check for signature on the tool call
+                    if (event.signature && event.signature.length >= MIN_SIGNATURE_LENGTH && currentBlockId) {
+                        cacheSignature(currentBlockId, event.signature);
+                    }
                 }
 
-                // Handle output item done
+                // Handle output item done - capture signature if present
                 if (eventType === 'response.output_item.done') {
-                    // Block will be closed when next item starts or at the end
+                    const item = event.item;
+                    if (item) {
+                        // Capture thinking signature
+                        if (item.type === 'reasoning' && item.signature) {
+                            if (item.signature.length >= MIN_SIGNATURE_LENGTH) {
+                                currentThinkingSignature = item.signature;
+                                cacheThinkingSignature(item.signature, 'openai');
+                            }
+                        }
+                        // Capture tool signature
+                        if (item.type === 'function_call' && item.signature && currentBlockId) {
+                            cacheSignature(currentBlockId, item.signature);
+                        }
+                    }
                 }
 
             } catch (parseError) {
@@ -248,7 +304,17 @@ export async function* streamResponsesAPI(response, model) {
         blockIndex = 1;
         currentBlockType = null;
     } else if (currentBlockType !== null) {
-        // Close any open block
+        // Close any open block with signature_delta if thinking
+        if (currentBlockType === 'thinking' && currentThinkingSignature) {
+            yield {
+                event: 'content_block_delta',
+                data: {
+                    type: 'content_block_delta',
+                    index: blockIndex,
+                    delta: { type: 'signature_delta', signature: currentThinkingSignature }
+                }
+            };
+        }
         yield {
             event: 'content_block_stop',
             data: { type: 'content_block_stop', index: blockIndex }
@@ -275,7 +341,7 @@ export async function* streamResponsesAPI(response, model) {
 /**
  * Parse SSE events from OpenAI Responses API (non-streaming)
  * Returns the final response object
- * 
+ *
  * @param {Response} response - The HTTP response with SSE body
  * @returns {Object} The parsed response object
  */

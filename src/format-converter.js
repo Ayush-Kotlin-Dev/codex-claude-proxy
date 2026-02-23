@@ -4,6 +4,10 @@
  */
 
 import crypto from 'crypto';
+import { cleanCacheControl, processAssistantContent, hasUnsignedThinkingBlocks } from './thinking-utils.js';
+import { getCachedSignature, cacheSignature, cacheThinkingSignature, SIGNATURE_CONSTANTS } from './signature-cache.js';
+
+const { MIN_SIGNATURE_LENGTH } = SIGNATURE_CONSTANTS;
 
 function extractSystemPrompt(system) {
     if (!system) {
@@ -30,11 +34,15 @@ function extractSystemPrompt(system) {
 export function convertAnthropicToResponsesAPI(anthropicRequest) {
     const { model, messages, system, tools, tool_choice } = anthropicRequest;
 
+    // [CRITICAL] Clean cache_control from all messages FIRST
+    // Claude Code CLI sends cache_control fields that the API rejects
+    const cleanedMessages = cleanCacheControl(messages || []);
+
     const instructions = extractSystemPrompt(system);
 
     const request = {
         model: model || 'gpt-5.2-codex',
-        input: convertMessagesToInput(messages),
+        input: convertMessagesToInput(cleanedMessages),
         tools: tools ? convertAnthropicToolsToOpenAI(tools) : [],
         tool_choice: tool_choice || 'auto',
         parallel_tool_calls: true,
@@ -82,7 +90,13 @@ function convertMessagesToInput(messages) {
                 input.push(result);
             }
         } else if (msg.role === 'assistant') {
-            const { textParts, toolCalls } = convertAssistantContentToOpenAI(msg.content);
+            // Process assistant content: restore signatures, reorder, sanitize
+            let msgContent = msg.content;
+            if (Array.isArray(msgContent)) {
+                msgContent = processAssistantContent(msgContent);
+            }
+            
+            const { textParts, toolCalls } = convertAssistantContentToOpenAI(msgContent);
             
             if (textParts.length > 0) {
                 // API accepts: string OR array of {type: 'output_text', text: '...'}
@@ -125,10 +139,8 @@ function convertUserContent(content) {
                         ? block.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
                         : JSON.stringify(block.content);
                 
+                // Preserve the original tool_use_id exactly - don't modify it
                 let callId = block.tool_use_id;
-                if (!callId.startsWith('fc_') && !callId.startsWith('fc')) {
-                    callId = 'fc_' + callId.replace(/^(call_|toolu_)/, '');
-                }
                 
                 toolResults.push({
                     type: 'function_call_output',
@@ -155,10 +167,26 @@ function convertAssistantContentToOpenAI(content) {
         for (const block of content) {
             if (block.type === 'text') {
                 textParts.push(block.text);
+            } else if (block.type === 'thinking') {
+                // Handle thinking blocks - they may have signatures we need to cache
+                if (block.signature && block.signature.length >= MIN_SIGNATURE_LENGTH) {
+                    cacheThinkingSignature(block.signature, 'openai');
+                }
+                // For now, we don't include thinking in the output
+                // The API will regenerate thinking as needed
             } else if (block.type === 'tool_use') {
-                let callId = block.id;
-                if (!callId.startsWith('fc_') && !callId.startsWith('fc')) {
-                    callId = 'fc_' + callId.replace(/^(call_|toolu_)/, '');
+                // Preserve the original tool ID exactly
+                const callId = block.id;
+                
+                // Check for cached signature
+                const cachedSig = getCachedSignature(callId);
+                if (cachedSig && block.thoughtSignature === undefined) {
+                    block.thoughtSignature = cachedSig;
+                }
+                
+                // Cache the signature if present
+                if (block.thoughtSignature && block.thoughtSignature.length >= MIN_SIGNATURE_LENGTH) {
+                    cacheSignature(callId, block.thoughtSignature);
                 }
                 
                 toolCalls.push({
@@ -299,17 +327,34 @@ export function convertOutputToAnthropic(output) {
                 input = {};
             }
             
-            content.push({
+            const toolId = item.call_id || item.id;
+            
+            const toolUseBlock = {
                 type: 'tool_use',
-                id: item.call_id || item.id,
+                id: toolId,
                 name: item.name,
                 input: input
-            });
+            };
+            
+            // Cache signature if present
+            if (item.signature && item.signature.length >= MIN_SIGNATURE_LENGTH) {
+                toolUseBlock.thoughtSignature = item.signature;
+                cacheSignature(toolId, item.signature);
+            }
+            
+            content.push(toolUseBlock);
         } else if (item.type === 'reasoning') {
+            const signature = item.signature || '';
+            
+            // Cache thinking signature
+            if (signature && signature.length >= MIN_SIGNATURE_LENGTH) {
+                cacheThinkingSignature(signature, 'openai');
+            }
+            
             content.push({
                 type: 'thinking',
-                thinking: '',
-                signature: ''
+                thinking: item.text || item.content || '',
+                signature: signature
             });
         }
     }

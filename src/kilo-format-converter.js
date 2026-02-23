@@ -3,6 +3,8 @@
  * Converts between Anthropic Messages API and OpenAI Chat Completions format
  */
 
+import { cleanCacheControl } from './thinking-utils.js';
+
 function extractSystemPrompt(system) {
     if (!system) return [];
     if (typeof system === 'string') return [{ role: 'system', content: system }];
@@ -134,9 +136,12 @@ function normalizeToolResultContent(block) {
 }
 
 function convertMessages(messages = []) {
+    // Clean cache_control from messages first
+    const cleanedMessages = cleanCacheControl(messages);
+    
     const output = [];
 
-    for (const msg of messages) {
+    for (const msg of cleanedMessages) {
         if (msg.role === 'user') {
             const textParts = normalizeTextBlocks(msg.content);
             if (textParts.length > 0) {
