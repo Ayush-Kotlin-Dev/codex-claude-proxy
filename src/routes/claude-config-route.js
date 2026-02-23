@@ -37,10 +37,10 @@ export async function handleSetProxyMode(req, res, { port }) {
   try {
     const proxyUrl = `http://localhost:${port}`;
     const models = {
-      default: 'claude-sonnet-4-5',
-      opus: 'claude-opus-4-5',
-      sonnet: 'claude-sonnet-4-5',
-      haiku: 'claude-haiku-4'
+      default: 'claude-sonnet-4-6',
+      opus: 'claude-opus-4-6',
+      sonnet: 'claude-sonnet-4-6',
+      haiku: 'claude-haiku-4-5'
     };
     const config = await setProxyMode(proxyUrl, models);
     res.json({
@@ -113,5 +113,3 @@ export default {
   handleSetDirectMode,
   handleSetClaudeApiEndpoint
 };
-
-

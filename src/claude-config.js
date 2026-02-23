@@ -81,10 +81,10 @@ export async function setProxyMode(proxyUrl, models = {}) {
             ANTHROPIC_BASE_URL: proxyUrl,
             ANTHROPIC_API_KEY: 'sk-ant-proxy',
             ANTHROPIC_AUTH_TOKEN: undefined, // Explicitly unset to avoid conflict
-            ANTHROPIC_MODEL: models.default || 'claude-sonnet-4-5',
-            ANTHROPIC_DEFAULT_OPUS_MODEL: models.opus || 'claude-opus-4-5',
-            ANTHROPIC_DEFAULT_SONNET_MODEL: models.sonnet || 'claude-sonnet-4-5',
-            ANTHROPIC_DEFAULT_HAIKU_MODEL: models.haiku || 'claude-haiku-4'
+            ANTHROPIC_MODEL: models.default || 'claude-sonnet-4-6',
+            ANTHROPIC_DEFAULT_OPUS_MODEL: models.opus || 'claude-opus-4-6',
+            ANTHROPIC_DEFAULT_SONNET_MODEL: models.sonnet || 'claude-sonnet-4-6',
+            ANTHROPIC_DEFAULT_HAIKU_MODEL: models.haiku || 'claude-haiku-4-5'
         }
     };
     

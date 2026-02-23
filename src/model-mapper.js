@@ -6,6 +6,19 @@
 import { getServerSettings } from './server-settings.js';
 
 const CLAUDE_MODEL_MAP = {
+  // Current Claude 4.6 models (Feb 2026)
+  'claude-opus-4-6': 'gpt-5.3-codex',
+  'claude-opus-4-6-20250219': 'gpt-5.3-codex',
+  'claude-sonnet-4-6': 'gpt-5.2',
+  'claude-sonnet-4-6-20250219': 'gpt-5.2',
+  'claude-haiku-4-5': 'kilo',
+  'claude-haiku-4-5-20250219': 'kilo',
+  
+  // 1M context variants
+  'claude-opus-4-6-1m': 'gpt-5.3-codex',
+  'claude-sonnet-4-6-1m': 'gpt-5.2',
+  
+  // Legacy Claude 4.5 models (deprecated but still supported)
   'claude-opus-4-5': 'gpt-5.3-codex',
   'claude-opus-4-5-20250514': 'gpt-5.3-codex',
   'claude-sonnet-4-5': 'gpt-5.2',
@@ -13,13 +26,19 @@ const CLAUDE_MODEL_MAP = {
   'claude-sonnet-4-20250514': 'gpt-5.2',
   'claude-haiku-4-20250514': 'kilo',
   'claude-haiku-3-5-20250514': 'kilo',
+  
+  // Legacy Claude 3.x models
   'claude-3-5-sonnet-20240620': 'gpt-5.2',
   'claude-3-opus-20240229': 'gpt-5.3-codex',
   'claude-3-sonnet-20240229': 'gpt-5.2',
   'claude-3-haiku-20240307': 'kilo',
+  
+  // Short aliases
   'sonnet': 'gpt-5.2',
   'opus': 'gpt-5.3-codex',
   'haiku': 'kilo',
+  
+  // Direct OpenAI models
   'gpt-5.3-codex': 'gpt-5.3-codex',
   'gpt-5.2-codex': 'gpt-5.2-codex',
   'gpt-5.1-codex-max': 'gpt-5.1-codex-max',

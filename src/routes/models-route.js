@@ -12,13 +12,21 @@ import { logger } from '../utils/logger.js';
 import { getCredentialsOrError } from '../middleware/credentials.js';
 
 const FALLBACK_MODELS = [
+  // OpenAI upstream models
   { id: 'gpt-5.3-codex', object: 'model', owned_by: 'openai' },
   { id: 'gpt-5.2-codex', object: 'model', owned_by: 'openai' },
   { id: 'gpt-5.1-codex', object: 'model', owned_by: 'openai' },
   { id: 'gpt-5.2', object: 'model', owned_by: 'openai' },
-  { id: 'claude-opus-4-5-20250514', object: 'model', owned_by: 'anthropic' },
-  { id: 'claude-sonnet-4-5-20250514', object: 'model', owned_by: 'anthropic' },
-  { id: 'claude-haiku-4-20250514', object: 'model', owned_by: 'anthropic' }
+  // Current Claude 4.6 models
+  { id: 'claude-opus-4-6', object: 'model', owned_by: 'anthropic' },
+  { id: 'claude-sonnet-4-6', object: 'model', owned_by: 'anthropic' },
+  { id: 'claude-haiku-4-5', object: 'model', owned_by: 'anthropic' },
+  // 1M context variants
+  { id: 'claude-opus-4-6-1m', object: 'model', owned_by: 'anthropic' },
+  { id: 'claude-sonnet-4-6-1m', object: 'model', owned_by: 'anthropic' },
+  // Legacy models (still supported)
+  { id: 'claude-opus-4-5', object: 'model', owned_by: 'anthropic' },
+  { id: 'claude-sonnet-4-5', object: 'model', owned_by: 'anthropic' }
 ];
 
 /**
