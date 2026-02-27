@@ -9,7 +9,7 @@
 
 import { getServerSettings, setServerSettings } from '../server-settings.js';
 
-const VALID_HAIKU_MODELS = ['glm-5', 'minimax-2.5'];
+const VALID_HAIKU_MODELS = ['kimi-k2.5', 'minimax-2.5'];
 const VALID_STRATEGIES = ['sticky', 'round-robin'];
 
 /**

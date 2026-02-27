@@ -120,7 +120,7 @@ test('logs show kilo and codex routing', { skip: shouldSkip }, async () => {
     .filter(Boolean);
 
   assert.ok(
-    messages.some((msg) => msg.includes('model=z-ai/glm-5:free') || msg.includes('model=minimax/minimax-m2.5:free')),
+    messages.some((msg) => msg.includes('model=moonshotai/kimi-k2.5:free') || msg.includes('model=minimax/minimax-m2.5:free')),
     `Expected kilo model log, got: ${messages.join(' | ')}`
   );
 

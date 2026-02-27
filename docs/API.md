@@ -4,7 +4,7 @@
 
 ### Haiku Routing Settings
 
-The `claude-haiku-4` (“Haiku”) lane can be configured to route via an alternate provider (e.g. **OpenRouter**) for supported models (e.g. **MiniMax M2.5** / **GLM-5**).
+The `claude-haiku-4` (“Haiku”) lane can be configured to route via an alternate provider (e.g. **OpenRouter**) for supported models (e.g. **MiniMax M2.5** / **Kimi K2.5**).
 
 ```bash
 GET /settings/haiku-model
@@ -12,7 +12,7 @@ GET /settings/haiku-model
 # Response
 {
   "success": true,
-  "haikuKiloModel": "glm-5"
+  "haikuKiloModel": "kimi-k2.5"
 }
 ```
 

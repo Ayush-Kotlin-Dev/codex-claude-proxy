@@ -81,7 +81,7 @@ public/
 - **src/format-converter.js**: Handles unnesting Anthropic `tool_use`/`tool_result` array objects from message contents into the discrete top-level `function_call` structure demanded by ChatGPT's Responses API. Prefixing function call IDs with `fc_`.
 - **src/response-streamer.js**: Binds to `response.output_item.added`, `response.completed`, and text delta stream chunks from OpenAI and maps them exactly to `message_start`, `content_block_delta`, and `message_stop` events.
 - **src/account-manager.js**: Reads `~/.codex-claude-proxy/` and proactively background-refreshes OAuth refresh tokens exactly 5 minutes before the 1hr expiry deadline.
-- **src/model-mapper.js**: Performs translation like `claude-opus-4-5` → `gpt-5.3-codex`. Supports `/settings/haiku-model` overrides which swap the OpenRouter backbone for Haiku endpoints (like `glm-5`).
+- **src/model-mapper.js**: Performs translation like `claude-opus-4-5` → `gpt-5.3-codex`. Supports `/settings/haiku-model` overrides which swap the OpenRouter backbone for Haiku endpoints (like `kimi-k2.5`).
 - **src/oauth.js**: Coordinates PKCE challenge mechanisms via local port 1455. Generates URIs and exchanges OAuth codes headlessly.
 
 ## Execution Rules (Strictly Follow)

@@ -30,7 +30,7 @@ test('convertAnthropicToOpenAIChat: string system prompt becomes system message'
     system: 'You are a helpful assistant.',
     messages: [{ role: 'user', content: 'hi' }]
   };
-  const result = convertAnthropicToOpenAIChat(req, 'z-ai/glm-5:free');
+  const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   const sysMsg = result.messages.find(m => m.role === 'system');
   assert.ok(sysMsg, 'Expected system message');
   assert.equal(sysMsg.content, 'You are a helpful assistant.');
@@ -44,14 +44,14 @@ test('convertAnthropicToOpenAIChat: array system prompt joins text blocks', () =
     ],
     messages: [{ role: 'user', content: 'hi' }]
   };
-  const result = convertAnthropicToOpenAIChat(req, 'z-ai/glm-5:free');
+  const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   const sysMsg = result.messages.find(m => m.role === 'system');
   assert.equal(sysMsg.content, 'Block one.\n\nBlock two.');
 });
 
 test('convertAnthropicToOpenAIChat: no system → no system message', () => {
   const req = { messages: [{ role: 'user', content: 'hi' }] };
-  const result = convertAnthropicToOpenAIChat(req, 'z-ai/glm-5:free');
+  const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   const sysMsg = result.messages.find(m => m.role === 'system');
   assert.equal(sysMsg, undefined);
 });
@@ -66,7 +66,7 @@ test('convertAnthropicToOpenAIChat: user content as array of text blocks', () =>
       ]
     }]
   };
-  const result = convertAnthropicToOpenAIChat(req, 'z-ai/glm-5:free');
+  const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   const userMsg = result.messages.find(m => m.role === 'user');
   assert.ok(userMsg.content.includes('First part.'));
   assert.ok(userMsg.content.includes('Second part.'));
@@ -83,7 +83,7 @@ test('convertAnthropicToOpenAIChat: tool_result becomes tool role message', () =
       }]
     }]
   };
-  const result = convertAnthropicToOpenAIChat(req, 'z-ai/glm-5:free');
+  const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   const toolMsg = result.messages.find(m => m.role === 'tool');
   assert.ok(toolMsg, 'Expected tool message');
   assert.equal(toolMsg.tool_call_id, 'call_abc');
@@ -102,7 +102,7 @@ test('convertAnthropicToOpenAIChat: assistant tool_use becomes tool_calls', () =
       }]
     }]
   };
-  const result = convertAnthropicToOpenAIChat(req, 'z-ai/glm-5:free');
+  const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   const assistantMsg = result.messages.find(m => m.role === 'assistant');
   assert.ok(assistantMsg, 'Expected assistant message');
   assert.ok(Array.isArray(assistantMsg.tool_calls));
@@ -113,19 +113,19 @@ test('convertAnthropicToOpenAIChat: assistant tool_use becomes tool_calls', () =
 
 test('convertAnthropicToOpenAIChat: stream defaults to true', () => {
   const req = { messages: [{ role: 'user', content: 'hi' }] };
-  const result = convertAnthropicToOpenAIChat(req, 'z-ai/glm-5:free');
+  const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   assert.equal(result.stream, true);
 });
 
 test('convertAnthropicToOpenAIChat: stream: false is respected', () => {
   const req = { messages: [{ role: 'user', content: 'hi' }], stream: false };
-  const result = convertAnthropicToOpenAIChat(req, 'z-ai/glm-5:free');
+  const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   assert.equal(result.stream, false);
 });
 
 test('convertAnthropicToOpenAIChat: max_tokens is forwarded', () => {
   const req = { messages: [{ role: 'user', content: 'hi' }], max_tokens: 100 };
-  const result = convertAnthropicToOpenAIChat(req, 'z-ai/glm-5:free');
+  const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   assert.equal(result.max_tokens, 100);
 });
 
@@ -135,7 +135,7 @@ test('convertAnthropicToOpenAIChat: temperature and top_p are forwarded', () => 
     temperature: 0.7,
     top_p: 0.9
   };
-  const result = convertAnthropicToOpenAIChat(req, 'z-ai/glm-5:free');
+  const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   assert.equal(result.temperature, 0.7);
   assert.equal(result.top_p, 0.9);
 });
@@ -145,7 +145,7 @@ test('convertAnthropicToOpenAIChat: stop_sequences maps to stop', () => {
     messages: [{ role: 'user', content: 'hi' }],
     stop_sequences: ['STOP', 'END']
   };
-  const result = convertAnthropicToOpenAIChat(req, 'z-ai/glm-5:free');
+  const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   assert.deepEqual(result.stop, ['STOP', 'END']);
 });
 
@@ -158,7 +158,7 @@ test('convertAnthropicToOpenAIChat: tools are converted to function format', () 
       input_schema: { type: 'object', properties: { city: { type: 'string' } } }
     }]
   };
-  const result = convertAnthropicToOpenAIChat(req, 'z-ai/glm-5:free');
+  const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   assert.ok(Array.isArray(result.tools));
   assert.equal(result.tools[0].type, 'function');
   assert.equal(result.tools[0].function.name, 'get_weather');
@@ -170,13 +170,13 @@ test('convertAnthropicToOpenAIChat: tool_choice with specific tool name', () => 
     tools: [{ name: 'search', description: 'd', input_schema: { type: 'object' } }],
     tool_choice: { type: 'tool', name: 'search' }
   };
-  const result = convertAnthropicToOpenAIChat(req, 'z-ai/glm-5:free');
+  const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   assert.deepEqual(result.tool_choice, { type: 'function', function: { name: 'search' } });
 });
 
 test('convertAnthropicToOpenAIChat: empty messages array', () => {
   const req = { messages: [] };
-  const result = convertAnthropicToOpenAIChat(req, 'z-ai/glm-5:free');
+  const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   assert.ok(Array.isArray(result.messages));
   assert.equal(result.messages.length, 0);
 });

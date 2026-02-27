@@ -9,6 +9,37 @@ import { getCachedSignature, cacheSignature, cacheThinkingSignature, SIGNATURE_C
 
 const { MIN_SIGNATURE_LENGTH } = SIGNATURE_CONSTANTS;
 
+/**
+ * Convert Anthropic tool ID to OpenAI fc_ format
+ * Deterministic: strips toolu_/call_ prefix, adds fc_ prefix
+ * @param {string} anthropicId - Original Anthropic tool ID (e.g., toolu_abc123)
+ * @returns {string} OpenAI fc_ format ID (e.g., fc_abc123)
+ */
+function toOpenAIToolId(anthropicId) {
+    if (!anthropicId) return `fc_${crypto.randomBytes(12).toString('hex')}`;
+    if (anthropicId.startsWith('fc_')) return anthropicId;
+
+    // Strip known prefixes and add fc_ prefix
+    const baseId = anthropicId.replace(/^(call_|toolu_)/, '');
+    return `fc_${baseId}`;
+}
+
+/**
+ * Convert OpenAI fc_ ID back to Anthropic toolu_ format
+ * Deterministic: strips fc_ prefix, adds toolu_ prefix
+ * This is the inverse of toOpenAIToolId
+ * @param {string} openAIId - OpenAI fc_ format ID (e.g., fc_abc123)
+ * @returns {string} Anthropic toolu_ format ID (e.g., toolu_abc123)
+ */
+function toAnthropicToolId(openAIId) {
+    if (!openAIId) return `toolu_${crypto.randomBytes(12).toString('hex')}`;
+    if (openAIId.startsWith('toolu_')) return openAIId;
+
+    // Strip fc_ prefix and add toolu_ prefix
+    const baseId = openAIId.replace(/^fc_/, '');
+    return `toolu_${baseId}`;
+}
+
 function extractSystemPrompt(system) {
     if (!system) {
         return undefined;
@@ -133,15 +164,15 @@ function convertUserContent(content) {
             if (block.type === 'text') {
                 textParts.push(block.text);
             } else if (block.type === 'tool_result') {
-                const outputContent = typeof block.content === 'string' 
-                    ? block.content 
+                const outputContent = typeof block.content === 'string'
+                    ? block.content
                     : Array.isArray(block.content)
                         ? block.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
                         : JSON.stringify(block.content);
-                
-                // Preserve the original tool_use_id exactly - don't modify it
-                let callId = block.tool_use_id;
-                
+
+                // Convert to OpenAI fc_ format
+                const callId = toOpenAIToolId(block.tool_use_id);
+
                 toolResults.push({
                     type: 'function_call_output',
                     call_id: callId,
@@ -175,27 +206,30 @@ function convertAssistantContentToOpenAI(content) {
                 // For now, we don't include thinking in the output
                 // The API will regenerate thinking as needed
             } else if (block.type === 'tool_use') {
-                // Preserve the original tool ID exactly
-                const callId = block.id;
-                
-                // Check for cached signature
-                const cachedSig = getCachedSignature(callId);
-                if (cachedSig && block.thoughtSignature === undefined) {
-                    block.thoughtSignature = cachedSig;
+                // Convert to OpenAI fc_ format while preserving mapping
+                const openAIId = toOpenAIToolId(block.id);
+
+                // Restore thoughtSignature from cache if missing (Claude Code strips it)
+                let thoughtSignature = block.thoughtSignature;
+                if (!thoughtSignature && block.id) {
+                    thoughtSignature = getCachedSignature(block.id);
+                    if (thoughtSignature) {
+                        console.log(`[FormatConverter] Restored signature from cache for tool: ${block.id}`);
+                    }
                 }
-                
-                // Cache the signature if present
-                if (block.thoughtSignature && block.thoughtSignature.length >= MIN_SIGNATURE_LENGTH) {
-                    cacheSignature(callId, block.thoughtSignature);
+
+                // Cache the signature for future restoration (keyed by original ID)
+                if (thoughtSignature && thoughtSignature.length >= MIN_SIGNATURE_LENGTH) {
+                    cacheSignature(block.id, thoughtSignature);
                 }
-                
+
                 toolCalls.push({
                     type: 'function_call',
-                    id: callId,
-                    call_id: callId,
+                    id: openAIId,
+                    call_id: openAIId,
                     name: block.name,
-                    arguments: typeof block.input === 'string' 
-                        ? block.input 
+                    arguments: typeof block.input === 'string'
+                        ? block.input
                         : JSON.stringify(block.input)
                 });
             }
@@ -320,28 +354,30 @@ export function convertOutputToAnthropic(output) {
         } else if (item.type === 'function_call') {
             let input = {};
             try {
-                input = typeof item.arguments === 'string' 
-                    ? JSON.parse(item.arguments) 
+                input = typeof item.arguments === 'string'
+                    ? JSON.parse(item.arguments)
                     : item.arguments || {};
             } catch (e) {
                 input = {};
             }
-            
-            const toolId = item.call_id || item.id;
-            
+
+            // Convert OpenAI fc_ ID back to original Anthropic ID
+            const openAIId = item.call_id || item.id;
+            const toolId = toAnthropicToolId(openAIId);
+
             const toolUseBlock = {
                 type: 'tool_use',
                 id: toolId,
                 name: item.name,
                 input: input
             };
-            
-            // Cache signature if present
+
+            // Cache signature if present (keyed by original Anthropic ID)
             if (item.signature && item.signature.length >= MIN_SIGNATURE_LENGTH) {
                 toolUseBlock.thoughtSignature = item.signature;
                 cacheSignature(toolId, item.signature);
             }
-            
+
             content.push(toolUseBlock);
         } else if (item.type === 'reasoning') {
             const signature = item.signature || '';
@@ -369,8 +405,15 @@ export function generateMessageId() {
     return `msg_${crypto.randomBytes(16).toString('hex')}`;
 }
 
+export {
+    toOpenAIToolId,
+    toAnthropicToolId
+};
+
 export default {
     convertAnthropicToResponsesAPI,
     convertOutputToAnthropic,
-    generateMessageId
+    generateMessageId,
+    toOpenAIToolId,
+    toAnthropicToolId
 };

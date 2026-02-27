@@ -258,7 +258,7 @@ test('convertOutputToAnthropic: converts function_call to tool_use block', () =>
   assert.equal(result[0].type, 'tool_use');
   assert.equal(result[0].name, 'my_tool');
   assert.deepEqual(result[0].input, { key: 'val' });
-  assert.equal(result[0].id, 'fc_abc');
+  assert.ok(result[0].id.startsWith('toolu_'));
 });
 
 test('convertOutputToAnthropic: handles invalid JSON arguments gracefully', () => {

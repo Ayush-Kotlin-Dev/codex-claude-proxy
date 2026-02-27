@@ -37,7 +37,7 @@ test('handleGetHaikuModel: returns current haikuKiloModel', () => {
   handleGetHaikuModel(req, res);
   assert.ok(res._body !== null);
   assert.ok('haikuKiloModel' in res._body);
-  assert.ok(['glm-5', 'minimax-2.5'].includes(res._body.haikuKiloModel));
+  assert.ok(['kimi-k2.5', 'minimax-2.5'].includes(res._body.haikuKiloModel));
 });
 
 test('handleSetHaikuModel: rejects invalid model with 400', () => {
@@ -57,13 +57,13 @@ test('handleSetHaikuModel: rejects empty body with 400', () => {
   assert.equal(res._body.success, false);
 });
 
-test('handleSetHaikuModel: accepts "glm-5" and returns updated setting', () => {
-  const req = mockReq({ haikuKiloModel: 'glm-5' });
+test('handleSetHaikuModel: accepts "kimi-k2.5" and returns updated setting', () => {
+  const req = mockReq({ haikuKiloModel: 'kimi-k2.5' });
   const res = mockRes();
   handleSetHaikuModel(req, res);
   assert.equal(res._status, 200);
   assert.equal(res._body.success, true);
-  assert.equal(res._body.haikuKiloModel, 'glm-5');
+  assert.equal(res._body.haikuKiloModel, 'kimi-k2.5');
 });
 
 test('handleSetHaikuModel: accepts "minimax-2.5" and returns updated setting', () => {

@@ -3,7 +3,7 @@
  * Streams SSE events from OpenAI Responses API and converts to Anthropic format
  */
 
-import { generateMessageId } from './format-converter.js';
+import { generateMessageId, toAnthropicToolId } from './format-converter.js';
 import { cacheSignature, cacheThinkingSignature, SIGNATURE_CONSTANTS } from './signature-cache.js';
 
 const { MIN_SIGNATURE_LENGTH } = SIGNATURE_CONSTANTS;
@@ -139,10 +139,12 @@ export async function* streamResponsesAPI(response, model) {
                         };
                     } else if (item.type === 'function_call') {
                         currentBlockType = 'tool_use';
-                        currentBlockId = item.call_id || item.id;
+                        // Convert OpenAI fc_ ID back to Anthropic ID
+                        const openAIId = item.call_id || item.id;
+                        currentBlockId = toAnthropicToolId(openAIId);
                         currentToolName = item.name;
                         stopReason = 'tool_use';
-                        
+
                         yield {
                             event: 'content_block_start',
                             data: {
@@ -175,15 +177,27 @@ export async function* streamResponsesAPI(response, model) {
                 // Handle text delta
                 if (eventType === 'response.output_text.delta') {
                     const delta = event.delta;
-                    if (delta && currentBlockType === 'text') {
-                        yield {
-                            event: 'content_block_delta',
-                            data: {
-                                type: 'content_block_delta',
-                                index: blockIndex,
-                                delta: { type: 'text_delta', text: delta }
-                            }
-                        };
+                    if (delta) {
+                        // If we're in a thinking block, treat text as thinking content
+                        if (currentBlockType === 'thinking') {
+                            yield {
+                                event: 'content_block_delta',
+                                data: {
+                                    type: 'content_block_delta',
+                                    index: blockIndex,
+                                    delta: { type: 'thinking_delta', thinking: delta }
+                                }
+                            };
+                        } else if (currentBlockType === 'text') {
+                            yield {
+                                event: 'content_block_delta',
+                                data: {
+                                    type: 'content_block_delta',
+                                    index: blockIndex,
+                                    delta: { type: 'text_delta', text: delta }
+                                }
+                            };
+                        }
                     }
                 }
 

@@ -53,7 +53,8 @@ export function cleanCacheControl(messages) {
     });
 
     if (removedCount > 0) {
-        console.log(`[ThinkingUtils] Removed cache_control from ${removedCount} block(s)`);
+        // Debug only - cache_control removal is expected behavior
+        // console.debug(`[ThinkingUtils] Removed cache_control from ${removedCount} block(s)`);
     }
 
     return cleaned;
@@ -198,6 +199,7 @@ export function removeTrailingThinkingBlocks(content) {
 /**
  * Filter thinking blocks: keep only those with valid signatures.
  * Blocks without signatures are dropped (API requires signatures).
+ * Also sanitizes blocks to remove extra fields like cache_control.
  *
  * @param {Array<Object>} content - Array of content blocks
  * @returns {Array<Object>} Filtered content with only valid signed thinking blocks
@@ -218,7 +220,8 @@ export function restoreThinkingSignatures(content) {
         if (block.signature && block.signature.length >= MIN_SIGNATURE_LENGTH) {
             filtered.push(sanitizeAnthropicThinkingBlock(block));
         }
-        // Unsigned thinking blocks are dropped
+        // Unsigned thinking blocks are dropped - there's no way to restore them
+        // as thinking signatures are cached by signature itself (for family tracking)
     }
 
     if (filtered.length < originalLength) {

@@ -67,6 +67,13 @@ export async function* streamOpenAIChat(response, model) {
         return emitContentBlockStart({ type: 'text', text: '' });
     };
 
+    const startThinkingBlock = () => {
+        currentBlockType = 'thinking';
+        currentToolCallId = null;
+        currentToolName = null;
+        return emitContentBlockStart({ type: 'thinking', thinking: '' });
+    };
+
     const startToolBlock = (toolCall) => {
         currentBlockType = 'tool_use';
         currentToolCallId = toolCall.id;
@@ -82,6 +89,22 @@ export async function* streamOpenAIChat(response, model) {
 
     const handleDelta = (delta) => {
         const events = [];
+
+        // Handle reasoning/thinking content (from models like Kimi K2.5)
+        const reasoningContent = delta.reasoning || delta.reasoning_content;
+        if (reasoningContent) {
+            if (!hasEmittedStart) {
+                hasEmittedStart = true;
+                events.push(emitMessageStart());
+                events.push(startThinkingBlock());
+            } else if (currentBlockType !== 'thinking') {
+                events.push(emitContentBlockStop());
+                blockIndex++;
+                events.push(startThinkingBlock());
+            }
+
+            events.push(emitContentBlockDelta({ type: 'thinking_delta', thinking: reasoningContent }));
+        }
 
         if (delta.content) {
             if (!hasEmittedStart) {

@@ -1,6 +1,6 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('app', () => ({
-        version: '1.0.3',
+        version: '1.0.4',
         connectionStatus: 'connecting',
         activeTab: 'dashboard',
         sidebarOpen: window.innerWidth >= 1024,
@@ -12,7 +12,7 @@ document.addEventListener('alpine:init', () => {
         searchQuery: '',
         stats: { total: 0, active: 0, expired: 0, planType: '-' },
 
-        haikuKiloModel: 'glm-5',
+        haikuKiloModel: 'kimi-k2.5',
         accountStrategy: 'sticky',
         haikuModelSaving: false,
         strategySaving: false,
@@ -37,7 +37,9 @@ document.addEventListener('alpine:init', () => {
         haikuTesting: false,
 
         haikuModelLabel() {
-            return this.haikuKiloModel === 'minimax-2.5' ? 'MiniMax M2.5' : 'GLM-5';
+            if (this.haikuKiloModel === 'minimax-2.5') return 'MiniMax M2.5';
+            if (this.haikuKiloModel === 'kimi-k2.5') return 'Kimi K2.5';
+            return 'Kimi K2.5';
         },
 
         async testHaikuChat() {

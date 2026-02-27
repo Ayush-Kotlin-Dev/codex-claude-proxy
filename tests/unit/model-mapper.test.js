@@ -101,7 +101,7 @@ test('resolveKiloModel: returns a non-empty string', () => {
 
 test('resolveKiloModel: returns one of the known kilo model identifiers', () => {
   const result = resolveKiloModel();
-  const validKiloModels = ['z-ai/glm-5:free', 'minimax/minimax-m2.5:free'];
+  const validKiloModels = ['moonshotai/kimi-k2.5:free', 'minimax/minimax-m2.5:free'];
   assert.ok(validKiloModels.includes(result), `Unexpected kilo model: ${result}`);
 });
 

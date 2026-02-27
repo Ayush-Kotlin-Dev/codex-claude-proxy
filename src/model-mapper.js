@@ -100,7 +100,7 @@ export function resolveKiloModel() {
   if (settings.haikuKiloModel === 'minimax-2.5') {
     return 'minimax/minimax-m2.5:free';
   }
-  return 'z-ai/glm-5:free';
+  return 'moonshotai/kimi-k2.5:free';
 }
 
 /**
