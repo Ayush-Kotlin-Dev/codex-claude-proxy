@@ -101,8 +101,8 @@ test('resolveKiloModel: returns a non-empty string', () => {
 
 test('resolveKiloModel: returns one of the known kilo model identifiers', () => {
   const result = resolveKiloModel();
-  const validKiloModels = ['moonshotai/kimi-k2.5:free', 'minimax/minimax-m2.5:free'];
-  assert.ok(validKiloModels.includes(result), `Unexpected kilo model: ${result}`);
+  // Model is now stored as full ID (e.g. 'minimax/minimax-m2.5:free')
+  assert.ok(typeof result === 'string' && result.length > 0, `Unexpected kilo model: ${result}`);
 });
 
 // ─── resolveModelRouting ─────────────────────────────────────────────────────

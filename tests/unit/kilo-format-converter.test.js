@@ -86,7 +86,7 @@ test('convertAnthropicToOpenAIChat: tool_result becomes tool role message', () =
   const result = convertAnthropicToOpenAIChat(req, 'moonshotai/kimi-k2.5:free');
   const toolMsg = result.messages.find(m => m.role === 'tool');
   assert.ok(toolMsg, 'Expected tool message');
-  assert.equal(toolMsg.tool_call_id, 'call_abc');
+  assert.equal(toolMsg.tool_call_id, 'fc_abc');
   assert.equal(toolMsg.content, 'search results here');
 });
 
@@ -106,7 +106,7 @@ test('convertAnthropicToOpenAIChat: assistant tool_use becomes tool_calls', () =
   const assistantMsg = result.messages.find(m => m.role === 'assistant');
   assert.ok(assistantMsg, 'Expected assistant message');
   assert.ok(Array.isArray(assistantMsg.tool_calls));
-  assert.equal(assistantMsg.tool_calls[0].id, 'call_xyz');
+  assert.equal(assistantMsg.tool_calls[0].id, 'fc_xyz');
   assert.equal(assistantMsg.tool_calls[0].function.name, 'search');
   assert.equal(assistantMsg.tool_calls[0].function.arguments, JSON.stringify({ query: 'test' }));
 });
@@ -220,7 +220,7 @@ test('convertOpenAIChatToAnthropic: tool_calls finish_reason maps to tool_use', 
   assert.ok(toolUse, 'Expected tool_use block');
   assert.equal(toolUse.name, 'search');
   assert.deepEqual(toolUse.input, { q: 'test' });
-  assert.equal(toolUse.id, 'call_1');
+  assert.equal(toolUse.id, 'toolu_call_1');
 });
 
 test('convertOpenAIChatToAnthropic: invalid tool_calls arguments → empty input', () => {
@@ -293,4 +293,45 @@ test('convertOpenAIChatToAnthropic: usage defaults to 0 when missing', () => {
   const result = convertOpenAIChatToAnthropic(openAiResp);
   assert.equal(result.usage.input_tokens, 0);
   assert.equal(result.usage.output_tokens, 0);
+});
+
+test('convertOpenAIChatToAnthropic: handles MiniMax M2.5 reasoning field', () => {
+    const openAiResp = {
+        choices: [{
+            message: { 
+                content: null, 
+                reasoning: 'Thinking about the answer...', 
+                tool_calls: null 
+            },
+            finish_reason: 'stop'
+        }],
+        usage: { prompt_tokens: 10, completion_tokens: 5 }
+    };
+    const result = convertOpenAIChatToAnthropic(openAiResp);
+    assert.equal(result.content.length, 1);
+    assert.equal(result.content[0].type, 'thinking');
+    assert.equal(result.content[0].thinking, 'Thinking about the answer...');
+});
+
+test('convertOpenAIChatToAnthropic: handles MiniMax M2.5 reasoning + tool_calls', () => {
+    const openAiResp = {
+        choices: [{
+            message: { 
+                content: null, 
+                reasoning: 'I need to use a tool.', 
+                tool_calls: [{
+                    id: 'call_1',
+                    type: 'function',
+                    function: { name: 'get_time', arguments: '{}' }
+                }] 
+            },
+            finish_reason: 'tool_calls'
+        }],
+        usage: { prompt_tokens: 10, completion_tokens: 20 }
+    };
+    const result = convertOpenAIChatToAnthropic(openAiResp);
+    assert.equal(result.content.length, 2);
+    assert.equal(result.content[0].type, 'thinking');
+    assert.equal(result.content[1].type, 'tool_use');
+    assert.equal(result.stopReason, 'tool_use');
 });
