@@ -87,6 +87,8 @@ export function handleCountTokens(req, res) {
         for (const block of msg.content) {
           if (block.type === 'text') {
             text += block.text + ' ';
+          } else if (block.type === 'thinking') {
+            text += (block.thinking || '') + ' ';
           } else if (block.type === 'tool_use' || block.type === 'tool_result') {
             text += JSON.stringify(block) + ' ';
           }

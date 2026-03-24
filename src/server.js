@@ -39,10 +39,16 @@ export function createServer({ port }) {
       'http://127.0.0.1'
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'anthropic-version', 'x-api-key', 'anthropic-beta', 'anthropic-dangerous-direct-browser-access'],
     credentials: false
   }));
   app.use(express.json({ limit: '10mb' }));
+
+  // Set anthropic-version response header on all /v1/ routes
+  app.use('/v1', (req, res, next) => {
+    res.setHeader('anthropic-version', '2023-06-01');
+    next();
+  });
 
   registerApiRoutes(app, { port });
 
