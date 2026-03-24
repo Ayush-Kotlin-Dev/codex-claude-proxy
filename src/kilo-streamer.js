@@ -99,10 +99,10 @@ export async function* streamOpenAIChat(response, model) {
                 events.push(emitMessageStart());
                 events.push(startThinkingBlock());
             } else if (currentBlockType !== 'thinking') {
-                if (currentBlockType === 'thinking') {
-                    events.push(emitContentBlockDelta({ type: 'signature_delta', signature: 'kilo-reasoning' }));
+                // Close previous non-thinking block before starting thinking
+                if (currentBlockType) {
+                    events.push(emitContentBlockStop());
                 }
-                events.push(emitContentBlockStop());
                 blockIndex++;
                 events.push(startThinkingBlock());
             }

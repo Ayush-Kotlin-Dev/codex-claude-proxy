@@ -50,6 +50,7 @@ function extractSystemPrompt(system) {
     }
     
     if (Array.isArray(system)) {
+        // Strip cache_control from system prompt blocks (Claude Code sends these)
         const textParts = system
             .filter(block => block.type === 'text')
             .map(block => block.text);
@@ -63,7 +64,7 @@ function extractSystemPrompt(system) {
  * Convert Anthropic Messages API request to OpenAI Responses API format
  */
 export function convertAnthropicToResponsesAPI(anthropicRequest) {
-    const { model, messages, system, tools, tool_choice } = anthropicRequest;
+    const { model, messages, system, tools, tool_choice, max_tokens, thinking, temperature, top_p, stop_sequences, stream } = anthropicRequest;
 
     // [CRITICAL] Clean cache_control from all messages FIRST
     // Claude Code CLI sends cache_control fields that the API rejects
@@ -75,11 +76,10 @@ export function convertAnthropicToResponsesAPI(anthropicRequest) {
         model: model || 'gpt-5.2-codex',
         input: convertMessagesToInput(cleanedMessages),
         tools: tools ? convertAnthropicToolsToOpenAI(tools) : [],
-        tool_choice: tool_choice || 'auto',
+        tool_choice: convertToolChoice(tool_choice),
         parallel_tool_calls: true,
         store: false,
-        stream: true,
-        include: []
+        stream: stream !== false
     };
     
     if (instructions) {
@@ -88,7 +88,56 @@ export function convertAnthropicToResponsesAPI(anthropicRequest) {
         request.instructions = '';
     }
 
+    // Pass through max_tokens if provided
+    if (typeof max_tokens === 'number') {
+        request.max_output_tokens = max_tokens;
+    }
+
+    // Map thinking/budget_tokens to reasoning config
+    if (thinking && thinking.type === 'enabled' && thinking.budget_tokens) {
+        request.reasoning = {
+            effort: budgetToEffort(thinking.budget_tokens, max_tokens),
+            summary: 'auto'
+        };
+    }
+
+    // Pass through optional parameters
+    if (typeof temperature === 'number') request.temperature = temperature;
+    if (typeof top_p === 'number') request.top_p = top_p;
+
     return request;
+}
+
+/**
+ * Convert Anthropic tool_choice to OpenAI Responses API format
+ * Anthropic: "auto" | "any" | "none" | { type: "tool", name: "..." } | { type: "auto" } | { type: "any" }
+ * OpenAI:    "auto" | "required" | "none" | { type: "function", function: { name: "..." } }
+ */
+function convertToolChoice(toolChoice) {
+    if (!toolChoice) return 'auto';
+    if (typeof toolChoice === 'string') {
+        if (toolChoice === 'any') return 'required';
+        return toolChoice; // 'auto', 'none'
+    }
+    if (toolChoice.type === 'tool' && toolChoice.name) {
+        return { type: 'function', function: { name: toolChoice.name } };
+    }
+    if (toolChoice.type === 'any') return 'required';
+    if (toolChoice.type === 'auto') return 'auto';
+    if (toolChoice.type === 'none') return 'none';
+    return 'auto';
+}
+
+/**
+ * Map thinking budget_tokens to reasoning effort level
+ * Small budgets → low effort, large budgets → high effort
+ */
+function budgetToEffort(budgetTokens, maxTokens) {
+    if (!budgetTokens) return 'medium';
+    const ratio = maxTokens ? budgetTokens / maxTokens : 0;
+    if (ratio >= 0.6 || budgetTokens >= 10000) return 'high';
+    if (ratio >= 0.3 || budgetTokens >= 4000) return 'medium';
+    return 'low';
 }
 
 /**

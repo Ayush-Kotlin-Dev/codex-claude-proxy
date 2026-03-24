@@ -93,6 +93,8 @@ export async function* sendMessageStream(anthropicRequest, accessToken, accountI
 
 /**
  * Send a non-streaming request to ChatGPT API
+ * Sends with stream: false and parses JSON response directly when possible,
+ * falls back to SSE parsing for APIs that always return SSE.
  */
 export async function sendMessage(anthropicRequest, accessToken, accountId) {
     const request = convertAnthropicToResponsesAPI({
@@ -106,7 +108,7 @@ export async function sendMessage(anthropicRequest, accessToken, accountId) {
             'Authorization': `Bearer ${accessToken}`,
             'ChatGPT-Account-ID': accountId,
             'Content-Type': 'application/json',
-            'Accept': 'text/event-stream'
+            'Accept': 'application/json'
         },
         body: JSON.stringify(request)
     });
@@ -121,7 +123,16 @@ export async function sendMessage(anthropicRequest, accessToken, accountId) {
         throw new Error(`API_ERROR: ${response.status} - ${errorText}`);
     }
 
-    const apiResponse = await parseResponsesAPIResponse(response);
+    // Try to parse as JSON first (true non-streaming response)
+    const contentType = response.headers.get('content-type') || '';
+    let apiResponse;
+
+    if (contentType.includes('application/json')) {
+        apiResponse = await response.json();
+    } else {
+        // Fallback: API returned SSE even with stream: false
+        apiResponse = await parseResponsesAPIResponse(response);
+    }
     
     if (!apiResponse) {
         return {
